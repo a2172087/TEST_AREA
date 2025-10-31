@@ -1091,7 +1091,7 @@ def regenerate_chart():
 
 def generate_index_html():
     """生成主頁面 HTML"""
-    
+
     html = '''
     <!DOCTYPE html>
     <html lang="zh-TW">
@@ -1099,199 +1099,289 @@ def generate_index_html():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>AutoZ Wafer4P Aligner V12.0</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             * {
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
             }
-            
+
             body {
                 font-family: "Microsoft JhengHei", "Segoe UI", Arial, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #F5F5F5 0%, #E8E8E8 100%);
                 min-height: 100vh;
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 padding: 20px;
             }
-            
+
             .container {
-                background: white;
+                background: #FFFFFF;
                 border-radius: 20px;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
                 max-width: 600px;
                 width: 100%;
                 padding: 40px;
+                animation: fadeIn 0.5s ease-in;
             }
-            
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
             .header {
                 text-align: center;
                 margin-bottom: 40px;
+                padding-bottom: 25px;
+                border-bottom: 1px solid #E8E8E8;
             }
-            
+
             .header h1 {
                 font-size: 28px;
-                color: #333;
+                color: #2C2C2C;
                 margin-bottom: 10px;
+                font-weight: 700;
+                letter-spacing: -0.5px;
             }
-            
+
             .header p {
-                color: #666;
-                font-size: 14px;
+                color: #666666;
+                font-size: 15px;
+                font-weight: 400;
             }
-            
+
             .version-badge {
                 display: inline-block;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #4A4A4A 0%, #2C2C2C 100%);
                 color: white;
-                padding: 5px 15px;
+                padding: 6px 16px;
                 border-radius: 20px;
                 font-size: 12px;
                 margin-top: 10px;
-            }
-            
-            .card {
-                background: #f8f9fa;
-                border-radius: 12px;
-                padding: 25px;
-                margin-bottom: 20px;
-            }
-            
-            .card-title {
-                font-size: 16px;
                 font-weight: 600;
-                color: #333;
+                letter-spacing: 0.5px;
+            }
+
+            .section {
+                margin-bottom: 30px;
+            }
+
+            .section-title {
+                font-size: 12px;
+                color: #666666;
+                margin-bottom: 15px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .card {
+                background: #FAFAFA;
+                border: 1px solid #E8E8E8;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 20px;
+                transition: all 0.3s ease;
+            }
+
+            .card:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            }
+
+            .card-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: #2C2C2C;
                 margin-bottom: 15px;
             }
             
             .form-group {
                 margin-bottom: 20px;
             }
-            
+
             .form-label {
                 display: block;
-                font-size: 14px;
-                color: #555;
-                margin-bottom: 8px;
-                font-weight: 500;
+                font-size: 13px;
+                color: #666666;
+                margin-bottom: 10px;
+                font-weight: 600;
             }
-            
+
             .form-select {
                 width: 100%;
-                padding: 12px 15px;
-                border: 2px solid #e0e0e0;
-                border-radius: 8px;
+                padding: 14px 16px;
+                border: 2px solid #E8E8E8;
+                border-radius: 10px;
                 font-size: 14px;
-                color: #333;
+                color: #2C2C2C;
                 background: white;
                 cursor: pointer;
-                transition: all 0.3s ease;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-family: "Microsoft JhengHei", "Segoe UI", Arial, sans-serif;
             }
-            
+
             .form-select:hover {
-                border-color: #667eea;
+                border-color: #D0D0D0;
+                background: #FAFAFA;
             }
-            
+
             .form-select:focus {
                 outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                border-color: #4A4A4A;
+                box-shadow: 0 0 0 3px rgba(74, 74, 74, 0.1);
+                background: white;
             }
-            
+
             .btn {
                 width: 100%;
-                padding: 15px;
+                padding: 16px;
                 border: none;
-                border-radius: 8px;
-                font-size: 14px;
+                border-radius: 12px;
+                font-size: 15px;
                 font-weight: 600;
                 cursor: pointer;
-                transition: all 0.3s ease;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 10px;
+                letter-spacing: 0.3px;
             }
-            
+
             .btn-primary {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
+                background: linear-gradient(135deg, #4A4A4A 0%, #2C2C2C 100%);
+                color: #FFFFFF;
+                box-shadow: 0 4px 12px rgba(44, 44, 44, 0.15);
             }
-            
+
             .btn-primary:hover:not(:disabled) {
                 transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+                box-shadow: 0 8px 20px rgba(44, 44, 44, 0.25);
+                background: linear-gradient(135deg, #5A5A5A 0%, #3C3C3C 100%);
             }
-            
+
             .btn-secondary {
-                background: #6c757d;
-                color: white;
+                background: linear-gradient(135deg, #3A3A3A 0%, #1A1A1A 100%);
+                color: #FFFFFF;
+                box-shadow: 0 4px 12px rgba(26, 26, 26, 0.15);
             }
-            
+
             .btn-secondary:hover:not(:disabled) {
-                background: #5a6268;
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(26, 26, 26, 0.25);
+                background: linear-gradient(135deg, #4A4A4A 0%, #2A2A2A 100%);
             }
-            
+
             .btn:disabled {
-                background: #e0e0e0;
-                color: #999;
+                background: #D0D0D0;
+                color: #888888;
                 cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
             }
             
             .btn-icon {
                 font-size: 18px;
             }
-            
+
             .file-info {
-                background: white;
-                padding: 12px 15px;
-                border-radius: 8px;
-                margin-top: 10px;
-                font-size: 13px;
-                color: #666;
+                background: #FAFAFA;
+                border: 1px solid #E8E8E8;
+                border-radius: 12px;
+                padding: 18px;
+                margin-top: 15px;
                 display: none;
             }
-            
+
             .file-info.show {
                 display: block;
+                animation: slideDown 0.3s ease;
             }
-            
-            .file-name {
-                color: #667eea;
+
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    max-height: 0;
+                }
+                to {
+                    opacity: 1;
+                    max-height: 200px;
+                }
+            }
+
+            .file-info-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+                border-bottom: 1px solid #E8E8E8;
+            }
+
+            .file-info-item:last-child {
+                border-bottom: none;
+            }
+
+            .file-info-label {
                 font-weight: 600;
+                color: #666666;
+                font-size: 13px;
             }
-            
+
+            .file-name {
+                color: #2C2C2C;
+                font-weight: 600;
+                font-size: 13px;
+            }
+
             .progress-container {
                 display: none;
                 margin-top: 20px;
             }
-            
+
             .progress-container.show {
                 display: block;
+                animation: fadeIn 0.3s ease;
             }
-            
+
             .progress-label {
-                font-size: 14px;
-                color: #666;
-                margin-bottom: 8px;
+                font-size: 13px;
+                color: #666666;
+                margin-bottom: 10px;
+                font-weight: 500;
             }
-            
-            .progress-bar {
+
+            .progress-bar-wrapper {
                 width: 100%;
-                height: 8px;
-                background: #e0e0e0;
-                border-radius: 4px;
+                height: 32px;
+                background: #E8E8E8;
+                border-radius: 16px;
                 overflow: hidden;
+                position: relative;
+                box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
             }
-            
+
             .progress-fill {
                 height: 100%;
-                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-                transition: width 0.3s ease;
+                background: linear-gradient(90deg, #5A5A5A 0%, #3A3A3A 100%);
                 width: 0%;
+                transition: width 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: 600;
+                font-size: 13px;
+                letter-spacing: 0.3px;
             }
-            
+
             .loading-spinner {
                 display: inline-block;
                 width: 20px;
@@ -1301,7 +1391,7 @@ def generate_index_html():
                 border-top-color: white;
                 animation: spin 1s ease-in-out infinite;
             }
-            
+
             @keyframes spin {
                 to { transform: rotate(360deg); }
             }
@@ -1313,121 +1403,162 @@ def generate_index_html():
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0,0,0,0.5);
+                background: rgba(0, 0, 0, 0.45);
+                backdrop-filter: blur(4px);
                 z-index: 1000;
                 justify-content: center;
                 align-items: center;
             }
-            
+
             .modal.show {
                 display: flex;
+                animation: fadeIn 0.3s ease;
             }
-            
+
             .modal-content {
                 background: white;
-                padding: 30px;
-                border-radius: 12px;
+                border-radius: 16px;
+                padding: 32px;
                 max-width: 400px;
                 width: 90%;
                 text-align: center;
+                animation: slideUp 0.3s ease;
+                box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
             }
-            
+
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(50px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
             .modal-icon {
                 font-size: 48px;
-                margin-bottom: 15px;
+                margin-bottom: 20px;
+                color: #4A4A4A;
             }
-            
+
             .modal-icon.error {
-                color: #dc3545;
+                color: #E74C3C;
             }
-            
+
             .modal-icon.success {
-                color: #28a745;
+                color: #27AE60;
             }
-            
+
             .modal-title {
                 font-size: 20px;
-                font-weight: 600;
-                margin-bottom: 10px;
-                color: #333;
+                font-weight: 700;
+                margin-bottom: 12px;
+                color: #2C2C2C;
             }
-            
+
             .modal-message {
                 font-size: 14px;
-                color: #666;
-                margin-bottom: 20px;
+                color: #666666;
+                margin-bottom: 24px;
+                white-space: pre-line;
+                line-height: 1.6;
             }
-            
+
             .modal-btn {
-                padding: 10px 30px;
+                padding: 12px 32px;
                 border: none;
-                border-radius: 6px;
+                border-radius: 10px;
                 font-size: 14px;
                 font-weight: 600;
                 cursor: pointer;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #4A4A4A 0%, #2C2C2C 100%);
                 color: white;
+                letter-spacing: 0.3px;
+                transition: all 0.3s ease;
             }
-            
+
             .modal-btn:hover {
-                opacity: 0.9;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(44, 44, 44, 0.25);
             }
             
             .step-indicator {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 30px;
+                margin-bottom: 35px;
                 position: relative;
+                padding: 0 10px;
             }
-            
+
             .step-indicator::before {
                 content: '';
                 position: absolute;
                 top: 20px;
-                left: 25%;
-                right: 25%;
-                height: 2px;
-                background: #e0e0e0;
-                z-index: -1;
+                left: 22%;
+                right: 22%;
+                height: 3px;
+                background: #E8E8E8;
+                z-index: 0;
+                border-radius: 2px;
             }
-            
+
             .step {
                 flex: 1;
                 text-align: center;
+                position: relative;
+                z-index: 1;
             }
-            
+
             .step-circle {
-                width: 40px;
-                height: 40px;
+                width: 42px;
+                height: 42px;
                 border-radius: 50%;
-                background: #e0e0e0;
-                color: #999;
+                background: #E8E8E8;
+                color: #999999;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 margin: 0 auto 10px;
-                font-weight: 600;
-                transition: all 0.3s ease;
+                font-weight: 700;
+                font-size: 16px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             }
-            
+
             .step.active .step-circle {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #4A4A4A 0%, #2C2C2C 100%);
                 color: white;
+                box-shadow: 0 4px 12px rgba(44, 44, 44, 0.25);
+                transform: scale(1.1);
             }
-            
+
             .step.completed .step-circle {
-                background: #28a745;
+                background: linear-gradient(135deg, #27AE60 0%, #229954 100%);
                 color: white;
+                box-shadow: 0 4px 12px rgba(39, 174, 96, 0.25);
             }
-            
+
+            .step.completed .step-circle::before {
+                content: '✓';
+                font-size: 20px;
+            }
+
             .step-label {
                 font-size: 12px;
-                color: #999;
+                color: #999999;
+                font-weight: 500;
+                letter-spacing: 0.3px;
             }
-            
-            .step.active .step-label,
+
+            .step.active .step-label {
+                color: #2C2C2C;
+                font-weight: 700;
+            }
+
             .step.completed .step-label {
-                color: #333;
+                color: #27AE60;
                 font-weight: 600;
             }
         </style>
@@ -1439,7 +1570,7 @@ def generate_index_html():
                 <p>Data Visualization Analytics Tool</p>
                 <span class="version-badge">Version 12.0</span>
             </div>
-            
+
             <!-- 步驟指示器 -->
             <div class="step-indicator">
                 <div class="step active" id="step1">
@@ -1455,54 +1586,62 @@ def generate_index_html():
                     <div class="step-label">ALL.txt</div>
                 </div>
             </div>
-            
-            <!-- 機台選擇卡片 -->
-            <div class="card">
-                <div class="card-title">Step 1: Select Machine Type</div>
-                <div class="form-group">
-                    <label class="form-label">Machine Type</label>
-                    <select class="form-select" id="machineSelect">
-                        <option value="">-- Select Machine --</option>
-                        <option value="J750">J750</option>
-                        <option value="J750EX">J750EX</option>
-                        <option value="UFLEX">UFLEX</option>
-                        <option value="ETS88">ETS88</option>
-                        <option value="Accotest">Accotest</option>
-                        <option value="AG93000">AG93000</option>
-                        <option value="T2K">T2K</option>
-                    </select>
+
+            <!-- Step 1: 機台選擇 -->
+            <div class="section">
+                <div class="section-title">Step 1: Select Machine Type</div>
+                <div class="card">
+                    <div class="form-group">
+                        <label class="form-label">Machine Type</label>
+                        <select class="form-select" id="machineSelect">
+                            <option value="">-- Select Machine --</option>
+                            <option value="J750">J750</option>
+                            <option value="J750EX">J750EX</option>
+                            <option value="UFLEX">UFLEX</option>
+                            <option value="ETS88">ETS88</option>
+                            <option value="Accotest">Accotest</option>
+                            <option value="AG93000">AG93000</option>
+                            <option value="T2K">T2K</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            
-            <!-- AutoZLog.txt 卡片 -->
-            <div class="card">
-                <div class="card-title">Step 2: Select AutoZLog.txt</div>
+
+            <!-- Step 2: AutoZLog.txt -->
+            <div class="section">
+                <div class="section-title">Step 2: Select AutoZLog.txt</div>
                 <button class="btn btn-primary" id="selectAutoZLog" disabled>
-                    <span class="btn-icon">📁</span>
+                    <i class="fas fa-folder-open"></i>
                     <span>Select AutoZLog.txt</span>
                 </button>
                 <div class="file-info" id="autoZLogInfo">
-                    Selected: <span class="file-name" id="autoZLogFileName"></span>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Selected File:</span>
+                        <span class="file-name" id="autoZLogFileName">None</span>
+                    </div>
                 </div>
             </div>
-            
-            <!-- ALL.txt 卡片 -->
-            <div class="card">
-                <div class="card-title">Step 3: Select ALL.txt</div>
+
+            <!-- Step 3: ALL.txt -->
+            <div class="section">
+                <div class="section-title">Step 3: Select ALL.txt</div>
                 <button class="btn btn-primary" id="selectAllTxt" disabled>
-                    <span class="btn-icon">📁</span>
+                    <i class="fas fa-folder-open"></i>
                     <span>Select ALL.txt</span>
                 </button>
                 <div class="file-info" id="allTxtInfo">
-                    Selected: <span class="file-name" id="allTxtFileName"></span>
+                    <div class="file-info-item">
+                        <span class="file-info-label">Selected File:</span>
+                        <span class="file-name" id="allTxtFileName">None</span>
+                    </div>
                 </div>
             </div>
-            
+
             <!-- 進度顯示 -->
             <div class="progress-container" id="progressContainer">
                 <div class="progress-label" id="progressLabel">Processing...</div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
+                <div class="progress-bar-wrapper">
+                    <div class="progress-fill" id="progressFill">0%</div>
                 </div>
             </div>
         </div>
@@ -1510,27 +1649,33 @@ def generate_index_html():
         <!-- 版本更新 Modal -->
         <div class="modal" id="versionModal">
             <div class="modal-content">
-                <div class="modal-icon" style="color: #667eea;">ℹ️</div>
+                <div class="modal-icon">
+                    <i class="fas fa-info-circle"></i>
+                </div>
                 <div class="modal-title">Version Update Available</div>
                 <div class="modal-message" id="versionMessage"></div>
                 <button class="modal-btn" id="versionUpdateBtn">Update Now</button>
             </div>
         </div>
-        
+
         <!-- 錯誤 Modal -->
         <div class="modal" id="errorModal">
             <div class="modal-content">
-                <div class="modal-icon error">⚠️</div>
+                <div class="modal-icon error">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
                 <div class="modal-title">Error</div>
                 <div class="modal-message" id="errorMessage"></div>
                 <button class="modal-btn" onclick="closeModal('errorModal')">OK</button>
             </div>
         </div>
-        
+
         <!-- 成功 Modal -->
         <div class="modal" id="successModal">
             <div class="modal-content">
-                <div class="modal-icon success">✓</div>
+                <div class="modal-icon success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
                 <div class="modal-title">Success</div>
                 <div class="modal-message" id="successMessage"></div>
                 <button class="modal-btn" onclick="closeModal('successModal')">OK</button>
@@ -1745,8 +1890,10 @@ def generate_index_html():
             function showProgress(message) {
                 document.getElementById('progressLabel').textContent = message;
                 document.getElementById('progressContainer').classList.add('show');
-                document.getElementById('progressFill').style.width = '0%';
-                
+                const progressFill = document.getElementById('progressFill');
+                progressFill.style.width = '0%';
+                progressFill.textContent = '0%';
+
                 // 模擬進度動畫
                 let progress = 0;
                 const interval = setInterval(() => {
@@ -1754,12 +1901,15 @@ def generate_index_html():
                     if (progress > 90) {
                         clearInterval(interval);
                     }
-                    document.getElementById('progressFill').style.width = progress + '%';
+                    progressFill.style.width = progress + '%';
+                    progressFill.textContent = progress + '%';
                 }, 100);
             }
-            
+
             function hideProgress() {
-                document.getElementById('progressFill').style.width = '100%';
+                const progressFill = document.getElementById('progressFill');
+                progressFill.style.width = '100%';
+                progressFill.textContent = '100%';
                 setTimeout(() => {
                     document.getElementById('progressContainer').classList.remove('show');
                 }, 500);
