@@ -2180,6 +2180,81 @@ def generate_result_html(data):
                 margin: 30px 0;
                 width: 100%;
             }}
+            .axis-toggle-container {{
+                margin: 20px auto;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                max-width: 1200px;
+                text-align: center;
+            }}
+            .axis-toggle-title {{
+                font-size: 16px;
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 15px;
+            }}
+            .axis-buttons {{
+                display: flex;
+                justify-content: center;
+                gap: 15px;
+            }}
+            .axis-btn {{
+                background: #f0f0f0;
+                color: #333;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                padding: 12px 30px;
+                font-size: 15px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.3s;
+                font-family: "Microsoft JhengHei", Arial, sans-serif;
+            }}
+            .axis-btn:hover {{
+                background: #e0e0e0;
+                border-color: #ccc;
+            }}
+            .axis-btn.active {{
+                background: #93aec1;
+                color: white;
+                border-color: #93aec1;
+            }}
+            .chart-loading-overlay {{
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 9999;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+            }}
+            .chart-loading-overlay.active {{
+                display: flex;
+            }}
+            .chart-loading-spinner {{
+                border: 5px solid #f3f3f3;
+                border-top: 5px solid #93aec1;
+                border-radius: 50%;
+                width: 60px;
+                height: 60px;
+                animation: spin 1s linear infinite;
+            }}
+            @keyframes spin {{
+                0% {{ transform: rotate(0deg); }}
+                100% {{ transform: rotate(360deg); }}
+            }}
+            .chart-loading-text {{
+                color: white;
+                font-size: 18px;
+                margin-top: 20px;
+                font-weight: bold;
+            }}
         </style>
     </head>
     <body>
@@ -2194,62 +2269,54 @@ def generate_result_html(data):
             </div>
 
             <div class="tab-buttons">
-                <button id="btn-wafer-status" class="tab-button" onclick="showTab('wafer-status')">Wafer Status</button>
-                <button id="btn-z-tab" class="tab-button active" onclick="showTab('z-tab')">Z Value</button>
-                <button id="btn-x-tab" class="tab-button" onclick="showTab('x-tab')">X Value</button>
-                <button id="btn-y-tab" class="tab-button" onclick="showTab('y-tab')">Y Value</button>
+                <button id="btn-wafer-status" class="tab-button active" onclick="showTab('wafer-status')">Wafer Status</button>
+                <button id="btn-chart" class="tab-button" onclick="showTab('chart')">Chart</button>
             </div>
 
             <!-- Wafer Status Dashboard Tab -->
-            <div id="wafer-status" class="tab-content">
+            <div id="wafer-status" class="tab-content" style="display: block;">
                 {wafer_status_html}
             </div>
 
-            <!-- Z Tab Content -->
-            <div id="z-tab" class="tab-content">
-                <!-- 1. Z Data Statistics (置頂) -->
-                <div class="statistics-container">
-                    <div class="stats-title">Z Data Statistics</div>
-                    {z_stats_html}
+            <!-- Chart Tab Content -->
+            <div id="chart" class="tab-content">
+                <!-- Axis Toggle Buttons -->
+                <div class="axis-toggle-container">
+                    <div class="axis-toggle-title">Select Axis for AutoZ Values Chart:</div>
+                    <div class="axis-buttons">
+                        <button class="axis-btn active" data-axis="z" onclick="switchAxis('z')">Z Axis</button>
+                        <button class="axis-btn" data-axis="x" onclick="switchAxis('x')">X Axis</button>
+                        <button class="axis-btn" data-axis="y" onclick="switchAxis('y')">Y Axis</button>
+                    </div>
                 </div>
 
-                <!-- 2. Z AutoZ Values 圖表 -->
-                <div class="chart-container">
+                <!-- Loading Indicator -->
+                <div id="chartLoadingOverlay" class="chart-loading-overlay">
+                    <div class="chart-loading-spinner"></div>
+                    <div class="chart-loading-text">Loading chart...</div>
+                </div>
+
+                <!-- 1. Data Statistics (dynamic based on selected axis) -->
+                <div class="statistics-container">
+                    <div class="stats-title" id="statsTitle">Z Data Statistics</div>
+                    <div id="statsContent">
+                        {z_stats_html}
+                    </div>
+                </div>
+
+                <!-- 2. AutoZ Values Chart (dynamic based on selected axis) -->
+                <div class="chart-container" id="autoZValuesChartContainer">
                     {z_html}
                 </div>
 
                 <div class="section-divider"></div>
 
-                <!-- 3. Z Value Anomaly Analysis 圖表 (不顯示統計數據) -->
+                <!-- 3. Z Value Anomaly Analysis Chart (fixed, always shows Z) -->
                 <div class="chart-container">
                     <div class="chart-title" style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;">
                         Z Value Anomaly Analysis
                     </div>
                     {z_anomaly_html}
-                </div>
-            </div>
-
-            <!-- X Tab Content -->
-            <div id="x-tab" class="tab-content">
-                <div class="statistics-container">
-                    <div class="stats-title">X Data Statistics</div>
-                    {x_stats_html}
-                </div>
-
-                <div class="chart-container">
-                    {x_html}
-                </div>
-            </div>
-
-            <!-- Y Tab Content -->
-            <div id="y-tab" class="tab-content">
-                <div class="statistics-container">
-                    <div class="stats-title">Y Data Statistics</div>
-                    {y_stats_html}
-                </div>
-
-                <div class="chart-container">
-                    {y_html}
                 </div>
             </div>
 
@@ -2259,10 +2326,67 @@ def generate_result_html(data):
         </div>
 
         <script>
-            // 頁面載入時默認顯示 Z 標籤頁
+            // 頁面載入時默認顯示 Wafer Status 標籤頁
             document.addEventListener('DOMContentLoaded', function() {{
-                showTab('z-tab');
+                showTab('wafer-status');
             }});
+
+            // 切換軸函數
+            async function switchAxis(axisType) {{
+                // 更新按鈕狀態
+                document.querySelectorAll('.axis-btn').forEach(btn => {{
+                    btn.classList.remove('active');
+                }});
+                document.querySelector(`button[data-axis="${{axisType}}"]`).classList.add('active');
+
+                // 顯示載入動畫
+                const loadingOverlay = document.getElementById('chartLoadingOverlay');
+                loadingOverlay.classList.add('active');
+
+                try {{
+                    // 呼叫 API 重新生成圖表
+                    const response = await fetch('/api/regenerate_chart', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ axis_type: axisType }})
+                    }});
+
+                    const result = await response.json();
+
+                    if (result.success) {{
+                        // 更新標題
+                        document.getElementById('statsTitle').textContent = `${{axisType.toUpperCase()}} Data Statistics`;
+
+                        // 更新統計數據
+                        const stats = result.stats;
+                        const statsHtml = `
+                            <div class="statistics-box">
+                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Min:</span> <span class="stat-value">${{stats.min.toFixed(4)}} µm</span></div>
+                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Max:</span> <span class="stat-value">${{stats.max.toFixed(4)}} µm</span></div>
+                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Mean:</span> <span class="stat-value">${{stats.mean.toFixed(4)}} µm</span></div>
+                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Median:</span> <span class="stat-value">${{stats.median.toFixed(4)}} µm</span></div>
+                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Std Dev:</span> <span class="stat-value">${{stats.std.toFixed(4)}} µm</span></div>
+                                <div class="stat-item"><span class="stat-label">Data Points:</span> <span class="stat-value">${{stats.count.toLocaleString()}}</span></div>
+                            </div>
+                        `;
+                        document.getElementById('statsContent').innerHTML = statsHtml;
+
+                        // 更新圖表
+                        const chartContainer = document.getElementById('autoZValuesChartContainer');
+                        chartContainer.innerHTML = '<div id="newChart"></div>';
+                        Plotly.newPlot('newChart', result.chart.data, result.chart.layout, {{responsive: true}});
+                    }} else {{
+                        console.error('Failed to regenerate chart:', result.error);
+                        alert('Failed to load chart: ' + result.error);
+                    }}
+                }} catch (error) {{
+                    console.error('Error switching axis:', error);
+                    alert('Error loading chart. Please try again.');
+                }} finally {{
+                    // 隱藏載入動畫
+                    loadingOverlay.classList.remove('active');
+                }}
+            }}
 
             // 心跳機制
             setInterval(() => {{
