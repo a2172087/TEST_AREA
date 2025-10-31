@@ -327,25 +327,18 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
     fig.update_layout(
         width=1100,
         height=600,
-        title=dict(
-            text=f"{axis_type.upper()} AutoZ Values",
-            x=0.5,
-            y=0.98,
-            xanchor='center',
-            yanchor='top',
-            font=dict(family='Microsoft JhengHei', size=18, weight='bold')
-        ),
+        showlegend=True,
         xaxis=dict(
             title="Sequential Index",
-            title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
-            tickfont=dict(family='Microsoft JhengHei', size=12),
+            title_font=dict(family='Arial Black', size=14),
+            tickfont=dict(family='Arial Black', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
         yaxis=dict(
             title=f"{axis_type.upper()} Value (µm)",
-            title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
-            tickfont=dict(family='Microsoft JhengHei', size=12),
+            title_font=dict(family='Arial Black', size=14),
+            tickfont=dict(family='Arial Black', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
@@ -355,7 +348,7 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
             bgcolor='rgba(255, 255, 255, 0.8)',
             bordercolor='lightgray',
             borderwidth=1,
-            font=dict(family='Microsoft JhengHei', size=12)
+            font=dict(family='Arial Black', size=12)
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
@@ -674,25 +667,18 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
     fig.update_layout(
         width=1100,
         height=600,
-        title=dict(
-            text=f"Z Value Anomaly Analysis (Below Standard: {anomaly_count}/{total_points}, {anomaly_percent:.1f}%)",
-            x=0.5,
-            y=0.98,
-            xanchor='center',
-            yanchor='top',
-            font=dict(family='Microsoft JhengHei', size=18, weight='bold')
-        ),
+        showlegend=True,
         xaxis=dict(
             title="Sequential Index",
-            title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
-            tickfont=dict(family='Microsoft JhengHei', size=12),
+            title_font=dict(family='Arial Black', size=14),
+            tickfont=dict(family='Arial Black', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
         yaxis=dict(
             title="Z Value (µm)",
-            title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
-            tickfont=dict(family='Microsoft JhengHei', size=12),
+            title_font=dict(family='Arial Black', size=14),
+            tickfont=dict(family='Arial Black', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
@@ -702,7 +688,7 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
             bgcolor='rgba(255, 255, 255, 0.8)',
             bordercolor='lightgray',
             borderwidth=1,
-            font=dict(family='Microsoft JhengHei', size=12)
+            font=dict(family='Arial Black', size=12)
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
@@ -2082,22 +2068,10 @@ def generate_result_html(data):
             .header {{
                 background-color: #2D2D2D;
                 color: #E0E0E0;
-                padding: 20px 15px;
+                padding: 15px;
                 text-align: center;
                 border-radius: 8px 8px 0 0;
                 margin-bottom: -10px;
-            }}
-
-            .header h1 {{
-                font-size: 28px;
-                margin-bottom: 8px;
-                font-weight: 700;
-            }}
-
-            .header p {{
-                font-size: 14px;
-                opacity: 0.9;
-                margin: 4px 0;
             }}
 
             /* Tab System */
