@@ -338,12 +338,12 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
         width=1100,
         height=600,
         title=dict(
-            text=f"{axis_type.upper()} AutoZ Values",
+            text=f"<b>{axis_type.upper()} AutoZ Values</b>",
             x=0.5,
             y=0.98,
             xanchor='center',
             yanchor='top',
-            font=dict(family='Microsoft JhengHei', size=18, weight='bold')
+            font=dict(family='Microsoft JhengHei', size=18)
         ),
         xaxis=dict(
             title="Sequential Index",
@@ -694,12 +694,12 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
         width=1100,
         height=600,
         title=dict(
-            text=f"Z Value Anomaly Analysis (Below Standard: {anomaly_count}/{total_points}, {anomaly_percent:.1f}%)",
+            text=f"<b>Z Value Anomaly Analysis (Below Standard: {anomaly_count}/{total_points}, {anomaly_percent:.1f}%)</b>",
             x=0.5,
             y=0.98,
             xanchor='center',
             yanchor='top',
-            font=dict(family='Microsoft JhengHei', size=18, weight='bold')
+            font=dict(family='Microsoft JhengHei', size=18)
         ),
         xaxis=dict(
             title="Sequential Index",
@@ -737,6 +737,288 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
     }
     
     return fig, stats
+
+
+def create_multi_axis_chart_with_dropdown(wafer_data, x_standard, y_standard, z_standard, standard_point_data=None):
+    """創建帶有 Plotly 內建下拉選單的多軸圖表
+
+    Args:
+        wafer_data: 晶圓資料字典
+        x_standard: X 軸標準值
+        y_standard: Y 軸標準值
+        z_standard: Z 軸標準值
+        standard_point_data: AutoZ complete 點位資料
+
+    Returns:
+        tuple: (fig, all_stats) Plotly 圖表物件和所有軸的統計資料
+    """
+
+    # 準備所有三個軸的數據
+    all_stats = {}
+    all_data = {'x': [], 'y': [], 'z': []}
+
+    # 按開始時間排序晶圓
+    sorted_wafers = sorted(wafer_data.items(), key=lambda x: x[1]['start_time'])
+
+    # 為每個軸準備數據
+    for axis_type in ['x', 'y', 'z']:
+        continuous_x = []
+        continuous_y = []
+        point_labels = []
+        wafer_boundaries = []
+
+        value_key = f"{axis_type}_values"
+        current_index = 0
+        max_y_value = float('-inf')
+        min_y_value = float('inf')
+
+        for wafer_id, data in sorted_wafers:
+            if value_key in data and data[value_key]:
+                values = data[value_key]
+
+                start_idx = current_index
+                end_idx = start_idx + len(values)
+
+                continuous_x.extend(range(start_idx, end_idx))
+                continuous_y.extend(values)
+                point_labels.extend([wafer_id] * len(values))
+
+                wafer_boundaries.append((start_idx, end_idx - 1))
+
+                current_index = end_idx
+
+                if values:
+                    max_y_value = max(max_y_value, max(values))
+                    min_y_value = min(min_y_value, min(values))
+
+        # 準備顏色和大小陣列
+        colors = []
+        sizes = []
+
+        # 檢查第一個點是否為 Auto Z complete 點
+        is_first_point_autoz = False
+        if standard_point_data and axis_type in standard_point_data:
+            autoz_value = standard_point_data[axis_type]
+            if len(continuous_y) > 0 and abs(continuous_y[0] - autoz_value) < 0.001:
+                is_first_point_autoz = True
+                max_y_value = max(max_y_value, autoz_value)
+                min_y_value = min(min_y_value, autoz_value)
+
+        for i in range(len(continuous_x)):
+            if i == 0 and is_first_point_autoz:
+                colors.append('#e5857b')
+                sizes.append(20)
+                point_labels[0] = "AutoZ Complete"
+            else:
+                colors.append('#93A1C1')
+                sizes.append(8)
+
+        # 儲存數據
+        all_data[axis_type] = {
+            'x': continuous_x,
+            'y': continuous_y,
+            'colors': colors,
+            'sizes': sizes,
+            'labels': point_labels,
+            'boundaries': wafer_boundaries,
+            'min_y': min_y_value,
+            'max_y': max_y_value
+        }
+
+        # 計算統計數據
+        all_values = continuous_y.copy() if continuous_y else []
+        all_stats[axis_type] = {
+            'min': min(all_values) if all_values else 0,
+            'max': max(all_values) if all_values else 0,
+            'mean': np.mean(all_values) if all_values else 0,
+            'median': np.median(all_values) if all_values else 0,
+            'std': np.std(all_values) if all_values else 0,
+            'count': len(all_values)
+        }
+
+    # 創建圖表（默認顯示 Z 軸）
+    fig = go.Figure()
+
+    # 為每個軸添加 traces（初始都不可見，除了 Z 軸）
+    for axis_type in ['z', 'x', 'y']:
+        data = all_data[axis_type]
+        visible = True if axis_type == 'z' else False
+
+        # 主線跡與標記
+        fig.add_trace(
+            go.Scatter(
+                x=data['x'],
+                y=data['y'],
+                mode='lines+markers',
+                name=f"{axis_type.upper()} Values",
+                text=data['labels'],
+                line=dict(color='#93A1C1', width=4),
+                marker=dict(
+                    size=data['sizes'],
+                    color=data['colors'],
+                    line=dict(color='white', width=2)
+                ),
+                hovertemplate="Point: %{text}<br>" + axis_type.upper() + " Value: %{y:.2f} µm<extra></extra>",
+                visible=visible
+            )
+        )
+
+        # 僅為 Z 軸添加標準參考線
+        if axis_type == 'z' and data['x']:
+            x_range_start = min(data['x'])
+            x_range_end = max(data['x'])
+
+            fig.add_trace(
+                go.Scatter(
+                    x=[x_range_start, x_range_end],
+                    y=[z_standard, z_standard],
+                    mode='lines',
+                    name=f"{axis_type.upper()} Standard",
+                    line=dict(color='#e5857b', width=4, dash='dash'),
+                    visible=visible,
+                    showlegend=True
+                )
+            )
+
+            # 在 Z 標準線上添加註釋
+            x_range = x_range_end - x_range_start if x_range_end > x_range_start else 1
+            x_pos = x_range_start + x_range / 2
+
+            fig.add_annotation(
+                x=x_pos,
+                y=z_standard,
+                text=f"Z Standard: {z_standard:.2f} µm",
+                showarrow=False,
+                yshift=15,
+                bgcolor="rgba(255, 255, 255, 0.8)",
+                bordercolor="#e5857b",
+                borderwidth=2,
+                borderpad=4,
+                font=dict(color="#e5857b", size=12, family="Microsoft JhengHei"),
+                visible=visible
+            )
+        else:
+            # 為 X 和 Y 軸添加空白的標準線佔位符（保持 trace 索引一致）
+            fig.add_trace(
+                go.Scatter(
+                    x=[],
+                    y=[],
+                    mode='lines',
+                    name=f"{axis_type.upper()} Standard",
+                    visible=False,
+                    showlegend=False
+                )
+            )
+
+        # 添加晶圓邊界標記
+        for i, (start, end) in enumerate(data['boundaries']):
+            fig.add_trace(
+                go.Scatter(
+                    x=[start, start],
+                    y=[data['min_y'], data['max_y']],
+                    mode='lines',
+                    line=dict(
+                        color='rgba(69, 73, 106, 0.25)',
+                        width=1.2,
+                        dash='dot'
+                    ),
+                    showlegend=False,
+                    visible=visible
+                )
+            )
+
+    # 計算每個軸有多少條 traces（主線 + 標準線 + 邊界線）
+    num_boundaries = len(all_data['z']['boundaries'])
+    traces_per_axis = 2 + num_boundaries  # 主線 + 標準線 + 邊界線
+
+    # 創建下拉選單按鈕
+    updatemenus = [
+        dict(
+            type="buttons",
+            direction="left",
+            buttons=list([
+                dict(
+                    args=[
+                        {"visible": [i < traces_per_axis for i in range(traces_per_axis * 3)]},
+                        {"title.text": "<b>Z AutoZ Values</b>",
+                         "yaxis.title.text": "Z Value (µm)"}
+                    ],
+                    label="Z Axis",
+                    method="update"
+                ),
+                dict(
+                    args=[
+                        {"visible": [traces_per_axis <= i < 2 * traces_per_axis for i in range(traces_per_axis * 3)]},
+                        {"title.text": "<b>X AutoZ Values</b>",
+                         "yaxis.title.text": "X Value (µm)"}
+                    ],
+                    label="X Axis",
+                    method="update"
+                ),
+                dict(
+                    args=[
+                        {"visible": [i >= 2 * traces_per_axis for i in range(traces_per_axis * 3)]},
+                        {"title.text": "<b>Y AutoZ Values</b>",
+                         "yaxis.title.text": "Y Value (µm)"}
+                    ],
+                    label="Y Axis",
+                    method="update"
+                ),
+            ]),
+            pad={"r": 10, "t": 10},
+            showactive=True,
+            x=0.5,
+            xanchor="center",
+            y=1.15,
+            yanchor="top",
+            bgcolor="#93aec1",
+            active=0,
+            font=dict(family="Microsoft JhengHei", size=14, color="white")
+        ),
+    ]
+
+    # 更新佈局
+    fig.update_layout(
+        updatemenus=updatemenus,
+        width=1100,
+        height=600,
+        title=dict(
+            text="<b>Z AutoZ Values</b>",
+            x=0.5,
+            y=0.98,
+            xanchor='center',
+            yanchor='top',
+            font=dict(family='Microsoft JhengHei', size=18)
+        ),
+        xaxis=dict(
+            title="Sequential Index",
+            title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
+            tickfont=dict(family='Microsoft JhengHei', size=12),
+            showgrid=True,
+            gridcolor='lightgray'
+        ),
+        yaxis=dict(
+            title="Z Value (µm)",
+            title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
+            tickfont=dict(family='Microsoft JhengHei', size=12),
+            showgrid=True,
+            gridcolor='lightgray'
+        ),
+        legend=dict(
+            x=1.1,
+            y=1,
+            bgcolor='rgba(255, 255, 255, 0.8)',
+            bordercolor='lightgray',
+            borderwidth=1,
+            font=dict(family='Microsoft JhengHei', size=12)
+        ),
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        hovermode='closest',
+        margin=dict(l=50, r=30, t=100, b=50)
+    )
+
+    return fig, all_stats
 
 
 # ==================== Worker 函數 ====================
@@ -1023,67 +1305,6 @@ def api_process_all_txt():
         return jsonify({
             'success': False,
             'error': result['error']
-        })
-
-
-@app.route('/api/regenerate_chart', methods=['POST'])
-def regenerate_chart():
-    """重新生成圖表 API (用於 X/Y/Z 軸切換)"""
-    update_activity()
-    
-    global analysis_file_data
-    
-    if analysis_file_data is None:
-        return jsonify({
-            'success': False,
-            'error': 'No analysis data available'
-        })
-    
-    data = request.get_json()
-    axis_type = data.get('axis_type', 'z').lower()
-    
-    if axis_type not in ['x', 'y', 'z']:
-        return jsonify({
-            'success': False,
-            'error': 'Invalid axis type'
-        })
-    
-    try:
-        wafer_data = analysis_file_data['wafer_data']
-        x_standard = analysis_file_data['x_standard']
-        y_standard = analysis_file_data['y_standard']
-        z_standard = analysis_file_data['z_standard']
-        
-        standard_point_data = {
-            'x': x_standard,
-            'y': y_standard,
-            'z': z_standard
-        }
-        
-        # 根據軸類型決定是否傳入標準值
-        standard_value = z_standard if axis_type == 'z' else None
-        
-        fig, stats = create_line_chart(
-            wafer_data, 
-            axis_type, 
-            standard_value,
-            standard_point_data
-        )
-        
-        # 將圖表轉為字典格式
-        chart_dict = fig.to_dict()
-        
-        return jsonify({
-            'success': True,
-            'chart': chart_dict,
-            'stats': stats
-        })
-        
-    except Exception as e:
-        print(f"Error regenerating chart: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
         })
 
 
@@ -1973,54 +2194,28 @@ def generate_result_html(data):
         'z': z_standard
     }
 
-    # 為所有三個軸生成圖表(包含 AutoZ complete 點位)
-    x_fig, x_stats = create_line_chart(wafer_data, 'x', x_standard, standard_point_data)
-    y_fig, y_stats = create_line_chart(wafer_data, 'y', y_standard, standard_point_data)
-    z_fig, z_stats = create_line_chart(wafer_data, 'z', z_standard, standard_point_data)
+    # 使用新的多軸圖表（帶 Plotly 內建切換功能）
+    multi_axis_fig, all_stats = create_multi_axis_chart_with_dropdown(
+        wafer_data, x_standard, y_standard, z_standard, standard_point_data
+    )
 
-    # 生成新的圖表(包含 AutoZ complete 點位)
+    # 生成異常分析圖表(包含 AutoZ complete 點位)
     z_anomaly_fig, z_anomaly_stats = create_z_anomaly_chart(wafer_data, z_standard, standard_point_data)
     wafer_status_html = create_wafer_status_dashboard(wafer_data, z_standard)
 
     # 轉換為 HTML
-    x_html = x_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
-    y_html = y_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
-    z_html = z_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
+    multi_axis_html = multi_axis_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
     z_anomaly_html = z_anomaly_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # 創建統計 HTML
-    x_stats_html = f'''
+    # 創建所有軸的統計 HTML（用於顯示提示信息）
+    stats_info_html = f'''
     <div class="statistics-box">
-        <div class="stat-item"><span class="stat-label">X Min:</span> <span class="stat-value">{x_stats['min']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">X Max:</span> <span class="stat-value">{x_stats['max']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">X Mean:</span> <span class="stat-value">{x_stats['mean']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">X Median:</span> <span class="stat-value">{x_stats['median']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">X Std Dev:</span> <span class="stat-value">{x_stats['std']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Data Points:</span> <span class="stat-value">{x_stats['count']:,}</span></div>
-    </div>
-    '''
-
-    y_stats_html = f'''
-    <div class="statistics-box">
-        <div class="stat-item"><span class="stat-label">Y Min:</span> <span class="stat-value">{y_stats['min']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Y Max:</span> <span class="stat-value">{y_stats['max']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Y Mean:</span> <span class="stat-value">{y_stats['mean']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Y Median:</span> <span class="stat-value">{y_stats['median']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Y Std Dev:</span> <span class="stat-value">{y_stats['std']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Data Points:</span> <span class="stat-value">{y_stats['count']:,}</span></div>
-    </div>
-    '''
-
-    z_stats_html = f'''
-    <div class="statistics-box">
-        <div class="stat-item"><span class="stat-label">Z Min:</span> <span class="stat-value">{z_stats['min']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Z Max:</span> <span class="stat-value">{z_stats['max']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Z Mean:</span> <span class="stat-value">{z_stats['mean']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Z Median:</span> <span class="stat-value">{z_stats['median']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Z Std Dev:</span> <span class="stat-value">{z_stats['std']:.4f} µm</span></div>
-        <div class="stat-item"><span class="stat-label">Data Points:</span> <span class="stat-value">{z_stats['count']:,}</span></div>
+        <div class="stat-item">
+            <span class="stat-label">統計數據說明</span>
+            <span class="stat-value" style="font-size: 14px;">使用圖表上方的按鈕切換 X/Y/Z 軸查看對應數據</span>
+        </div>
     </div>
     '''
 
@@ -2066,18 +2261,23 @@ def generate_result_html(data):
             .header {{
                 background-color: #2D2D2D;
                 color: #E0E0E0;
-                padding: 15px 15px 10px 15px;
+                padding: 15px 15px 15px 15px;
                 text-align: center;
                 border-radius: 8px 8px 0 0;
                 margin-bottom: 0;
             }}
+            .header h1 {{
+                margin: 0 0 5px 0;
+            }}
+            .header p {{
+                margin: 5px 0;
+                font-size: 15px;
+            }}
             .timestamp {{
-                font-size: 12px;
-                color: #AAAAAA;
-                text-align: right;
-                padding: 0 20px 10px 0;
-                margin: 0;
-                background-color: #2D2D2D;
+                font-size: 15px;
+                color: #E0E0E0;
+                text-align: center;
+                margin: 5px 0 0 0;
             }}
             .tab-buttons {{
                 display: flex;
@@ -2180,81 +2380,6 @@ def generate_result_html(data):
                 margin: 30px 0;
                 width: 100%;
             }}
-            .axis-toggle-container {{
-                margin: 20px auto;
-                padding: 20px;
-                background-color: #f8f9fa;
-                border-radius: 8px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                max-width: 1200px;
-                text-align: center;
-            }}
-            .axis-toggle-title {{
-                font-size: 16px;
-                font-weight: bold;
-                color: #333;
-                margin-bottom: 15px;
-            }}
-            .axis-buttons {{
-                display: flex;
-                justify-content: center;
-                gap: 15px;
-            }}
-            .axis-btn {{
-                background: #f0f0f0;
-                color: #333;
-                border: 2px solid #ddd;
-                border-radius: 8px;
-                padding: 12px 30px;
-                font-size: 15px;
-                font-weight: bold;
-                cursor: pointer;
-                transition: all 0.3s;
-                font-family: "Microsoft JhengHei", Arial, sans-serif;
-            }}
-            .axis-btn:hover {{
-                background: #e0e0e0;
-                border-color: #ccc;
-            }}
-            .axis-btn.active {{
-                background: #93aec1;
-                color: white;
-                border-color: #93aec1;
-            }}
-            .chart-loading-overlay {{
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 9999;
-                justify-content: center;
-                align-items: center;
-                flex-direction: column;
-            }}
-            .chart-loading-overlay.active {{
-                display: flex;
-            }}
-            .chart-loading-spinner {{
-                border: 5px solid #f3f3f3;
-                border-top: 5px solid #93aec1;
-                border-radius: 50%;
-                width: 60px;
-                height: 60px;
-                animation: spin 1s linear infinite;
-            }}
-            @keyframes spin {{
-                0% {{ transform: rotate(0deg); }}
-                100% {{ transform: rotate(360deg); }}
-            }}
-            .chart-loading-text {{
-                color: white;
-                font-size: 18px;
-                margin-top: 20px;
-                font-weight: bold;
-            }}
         </style>
     </head>
     <body>
@@ -2262,10 +2387,7 @@ def generate_result_html(data):
             <div class="header">
                 <h1>AutoZ Wafer4P Aligner - {selected_machine_type}</h1>
                 <p>Data Visualization Analytics Tool</p>
-            </div>
-
-            <div class="timestamp">
-                Generated on: {timestamp}
+                <p class="timestamp">Generated on: {timestamp}</p>
             </div>
 
             <div class="tab-buttons">
@@ -2280,38 +2402,19 @@ def generate_result_html(data):
 
             <!-- Chart Tab Content -->
             <div id="chart" class="tab-content">
-                <!-- Axis Toggle Buttons -->
-                <div class="axis-toggle-container">
-                    <div class="axis-toggle-title">Select Axis for AutoZ Values Chart:</div>
-                    <div class="axis-buttons">
-                        <button class="axis-btn active" data-axis="z" onclick="switchAxis('z')">Z Axis</button>
-                        <button class="axis-btn" data-axis="x" onclick="switchAxis('x')">X Axis</button>
-                        <button class="axis-btn" data-axis="y" onclick="switchAxis('y')">Y Axis</button>
-                    </div>
-                </div>
-
-                <!-- Loading Indicator -->
-                <div id="chartLoadingOverlay" class="chart-loading-overlay">
-                    <div class="chart-loading-spinner"></div>
-                    <div class="chart-loading-text">Loading chart...</div>
-                </div>
-
-                <!-- 1. Data Statistics (dynamic based on selected axis) -->
+                <!-- 1. AutoZ Values Chart with Built-in Axis Switching -->
                 <div class="statistics-container">
-                    <div class="stats-title" id="statsTitle">Z Data Statistics</div>
-                    <div id="statsContent">
-                        {z_stats_html}
-                    </div>
+                    <div class="stats-title">AutoZ Values Chart</div>
+                    {stats_info_html}
                 </div>
 
-                <!-- 2. AutoZ Values Chart (dynamic based on selected axis) -->
-                <div class="chart-container" id="autoZValuesChartContainer">
-                    {z_html}
+                <div class="chart-container">
+                    {multi_axis_html}
                 </div>
 
                 <div class="section-divider"></div>
 
-                <!-- 3. Z Value Anomaly Analysis Chart (fixed, always shows Z) -->
+                <!-- 2. Z Value Anomaly Analysis Chart (fixed, always shows Z) -->
                 <div class="chart-container">
                     <div class="chart-title" style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;">
                         Z Value Anomaly Analysis
@@ -2330,63 +2433,6 @@ def generate_result_html(data):
             document.addEventListener('DOMContentLoaded', function() {{
                 showTab('wafer-status');
             }});
-
-            // 切換軸函數
-            async function switchAxis(axisType) {{
-                // 更新按鈕狀態
-                document.querySelectorAll('.axis-btn').forEach(btn => {{
-                    btn.classList.remove('active');
-                }});
-                document.querySelector(`button[data-axis="${{axisType}}"]`).classList.add('active');
-
-                // 顯示載入動畫
-                const loadingOverlay = document.getElementById('chartLoadingOverlay');
-                loadingOverlay.classList.add('active');
-
-                try {{
-                    // 呼叫 API 重新生成圖表
-                    const response = await fetch('/api/regenerate_chart', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ axis_type: axisType }})
-                    }});
-
-                    const result = await response.json();
-
-                    if (result.success) {{
-                        // 更新標題
-                        document.getElementById('statsTitle').textContent = `${{axisType.toUpperCase()}} Data Statistics`;
-
-                        // 更新統計數據
-                        const stats = result.stats;
-                        const statsHtml = `
-                            <div class="statistics-box">
-                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Min:</span> <span class="stat-value">${{stats.min.toFixed(4)}} µm</span></div>
-                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Max:</span> <span class="stat-value">${{stats.max.toFixed(4)}} µm</span></div>
-                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Mean:</span> <span class="stat-value">${{stats.mean.toFixed(4)}} µm</span></div>
-                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Median:</span> <span class="stat-value">${{stats.median.toFixed(4)}} µm</span></div>
-                                <div class="stat-item"><span class="stat-label">${{axisType.toUpperCase()}} Std Dev:</span> <span class="stat-value">${{stats.std.toFixed(4)}} µm</span></div>
-                                <div class="stat-item"><span class="stat-label">Data Points:</span> <span class="stat-value">${{stats.count.toLocaleString()}}</span></div>
-                            </div>
-                        `;
-                        document.getElementById('statsContent').innerHTML = statsHtml;
-
-                        // 更新圖表
-                        const chartContainer = document.getElementById('autoZValuesChartContainer');
-                        chartContainer.innerHTML = '<div id="newChart"></div>';
-                        Plotly.newPlot('newChart', result.chart.data, result.chart.layout, {{responsive: true}});
-                    }} else {{
-                        console.error('Failed to regenerate chart:', result.error);
-                        alert('Failed to load chart: ' + result.error);
-                    }}
-                }} catch (error) {{
-                    console.error('Error switching axis:', error);
-                    alert('Error loading chart. Please try again.');
-                }} finally {{
-                    // 隱藏載入動畫
-                    loadingOverlay.classList.remove('active');
-                }}
-            }}
 
             // 心跳機制
             setInterval(() => {{
