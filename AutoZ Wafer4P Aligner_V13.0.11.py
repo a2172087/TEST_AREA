@@ -513,14 +513,15 @@ def create_wafer_status_dashboard(wafer_data, z_standard):
     
     return css + html_content
 
-def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
-    """創建突顯低於標準的 Z 值的圖表
-    
+def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_data=None):
+    """創建突顯低於標準值的圖表（支援 X/Y/Z 三軸）
+
     Args:
         wafer_data: 晶圓資料字典
-        z_standard: Z 標準值
+        axis_type: 軸類型 ('x', 'y', 'z')
+        standard_value: 標準值
         standard_point_data: AutoZ complete 點位資料
-        
+
     Returns:
         tuple: (fig, stats) Plotly 圖表物件和統計資料
     """
@@ -537,34 +538,35 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
     current_index = 0
     
     for wafer_id, data in sorted_wafers:
-        if 'z_values' in data and data['z_values']:
-            values = data['z_values']
+        values_key = f'{axis_type}_values'
+        if values_key in data and data[values_key]:
+            values = data[values_key]
             indices = list(range(current_index, current_index + len(values)))
-            
-            for idx, z_val in zip(indices, values):
+
+            for idx, val in zip(indices, values):
                 wafer_ids.append(wafer_id)
-                if z_val < z_standard:
+                if val < standard_value:
                     anomaly_indices.append(idx)
-                    anomaly_y.append(z_val)
+                    anomaly_y.append(val)
                 else:
                     normal_indices.append(idx)
-                    normal_y.append(z_val)
-            
+                    normal_y.append(val)
+
             current_index += len(values)
     
-    # 檢查第一個點是否為 Auto Z complete 點
+    # 檢查第一個點是否為 AutoZ complete 點
     is_first_point_autoz = False
-    if standard_point_data and 'z' in standard_point_data:
-        autoz_z_value = standard_point_data['z']
+    if standard_point_data and axis_type in standard_point_data:
+        autoz_value = standard_point_data[axis_type]
         if len(wafer_ids) > 0:
             if normal_indices and normal_indices[0] == 0:
-                first_z = normal_y[0]
+                first_value = normal_y[0]
             elif anomaly_indices and anomaly_indices[0] == 0:
-                first_z = anomaly_y[0]
+                first_value = anomaly_y[0]
             else:
-                first_z = None
-            
-            if first_z is not None and abs(first_z - autoz_z_value) < 0.001:
+                first_value = None
+
+            if first_value is not None and abs(first_value - autoz_value) < 0.001:
                 is_first_point_autoz = True
     
     # 添加正常點
@@ -600,8 +602,8 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
                     symbol=normal_symbols,
                     line=dict(width=1, color='white')
                 ),
-                text=[f"{'AutoZ Complete' if (idx == 0 and is_first_point_autoz) else f'Wafer ID: {wid}'}<br>Z Value: {z:.2f} µm" 
-                      for idx, wid, z in zip(normal_indices, normal_wafer_ids_list, normal_y)],
+                text=[f"{'AutoZ Complete' if (idx == 0 and is_first_point_autoz) else f'Wafer ID: {wid}'}<br>{axis_type.upper()} Value: {val:.2f} µm"
+                      for idx, wid, val in zip(normal_indices, normal_wafer_ids_list, normal_y)],
                 hoverinfo='text'
             )
         )
@@ -639,8 +641,8 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
                     symbol=anomaly_symbols,
                     line=dict(width=1, color='white')
                 ),
-                text=[f"{'AutoZ Complete' if (idx == 0 and is_first_point_autoz) else f'Wafer ID: {wid}'}<br>Z Value: {z:.2f} µm" 
-                      for idx, wid, z in zip(anomaly_indices, anomaly_wafer_ids_list, anomaly_y)],
+                text=[f"{'AutoZ Complete' if (idx == 0 and is_first_point_autoz) else f'Wafer ID: {wid}'}<br>{axis_type.upper()} Value: {val:.2f} µm"
+                      for idx, wid, val in zip(anomaly_indices, anomaly_wafer_ids_list, anomaly_y)],
                 hoverinfo='text'
             )
         )
@@ -651,9 +653,9 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
     fig.add_trace(
         go.Scatter(
             x=[x_range_start, x_range_end],
-            y=[z_standard, z_standard],
+            y=[standard_value, standard_value],
             mode='lines',
-            name=f"Z Standard ({z_standard} µm)",
+            name=f"{axis_type.upper()} Standard ({standard_value} µm)",
             line=dict(color='#E91E63', width=3, dash='dash')
         )
     )
@@ -676,7 +678,7 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
             gridcolor='lightgray'
         ),
         yaxis=dict(
-            title="Z Value (µm)",
+            title=f"{axis_type.upper()} Value (µm)",
             title_font=dict(family='Arial Black', size=14),
             tickfont=dict(family='Arial Black', size=12),
             showgrid=True,
@@ -1007,30 +1009,50 @@ def regenerate_chart():
         x_standard = analysis_file_data['x_standard']
         y_standard = analysis_file_data['y_standard']
         z_standard = analysis_file_data['z_standard']
-        
+
         standard_point_data = {
             'x': x_standard,
             'y': y_standard,
             'z': z_standard
         }
-        
-        # 根據軸類型決定是否傳入標準值
-        standard_value = z_standard if axis_type == 'z' else None
-        
-        fig, stats = create_line_chart(
-            wafer_data, 
-            axis_type, 
+
+        # 獲取對應軸的標準值
+        standard_map = {
+            'x': x_standard,
+            'y': y_standard,
+            'z': z_standard
+        }
+        standard_value = standard_map.get(axis_type)
+
+        # 根據軸類型決定主圖表是否傳入標準值（僅 Z 軸顯示標準線）
+        main_standard = standard_value if axis_type == 'z' else None
+
+        # 生成主圖表
+        main_fig, stats = create_line_chart(
+            wafer_data,
+            axis_type,
+            main_standard,
+            standard_point_data
+        )
+
+        # 生成異常分析圖表
+        anomaly_fig, anomaly_stats = create_anomaly_chart(
+            wafer_data,
+            axis_type,
             standard_value,
             standard_point_data
         )
-        
+
         # 將圖表轉為字典格式
-        chart_dict = fig.to_dict()
-        
+        main_chart_dict = main_fig.to_dict()
+        anomaly_chart_dict = anomaly_fig.to_dict()
+
         return jsonify({
             'success': True,
-            'chart': chart_dict,
-            'stats': stats
+            'main_chart': main_chart_dict,
+            'anomaly_chart': anomaly_chart_dict,
+            'stats': stats,
+            'anomaly_stats': anomaly_stats
         })
         
     except Exception as e:
@@ -1983,7 +2005,7 @@ def generate_result_html(data):
     z_fig, z_stats = create_line_chart(wafer_data, 'z', z_standard, standard_point_data)
 
     # 生成新的圖表(包含 AutoZ complete 點位)
-    z_anomaly_fig, z_anomaly_stats = create_z_anomaly_chart(wafer_data, z_standard, standard_point_data)
+    z_anomaly_fig, z_anomaly_stats = create_anomaly_chart(wafer_data, 'z', z_standard, standard_point_data)
     wafer_status_html = create_wafer_status_dashboard(wafer_data, z_standard)
 
     # 轉換為 HTML
@@ -2488,9 +2510,9 @@ def generate_result_html(data):
                 <div class="section-divider"></div>
 
                 <!-- Z Value Anomaly Analysis Chart -->
-                <div class="chart-container">
-                    <div class="chart-title">Z Value Anomaly Analysis</div>
-                    {z_anomaly_html}
+                <div class="chart-container" id="anomalyChartContainer">
+                    <div class="chart-title" id="anomalyChartTitle">Z Value Anomaly Analysis</div>
+                    <div id="anomalyChart">{z_anomaly_html}</div>
                 </div>
             </div>
         </div>
@@ -2570,10 +2592,18 @@ def generate_result_html(data):
                         `;
                         document.getElementById('statsContent').innerHTML = statsHtml;
 
-                        // Update chart
+                        // Update main chart
                         const chartContainer = document.getElementById('autoZValuesChartContainer');
                         chartContainer.innerHTML = '<div class="chart-title">' + axisType.toUpperCase() + ' AutoZ Values</div><div id="newChart"></div>';
-                        Plotly.newPlot('newChart', result.chart.data, result.chart.layout, {{responsive: true}});
+                        Plotly.newPlot('newChart', result.main_chart.data, result.main_chart.layout, {{responsive: true}});
+
+                        // Update anomaly chart
+                        const anomalyContainer = document.getElementById('anomalyChartContainer');
+                        anomalyContainer.innerHTML = `
+                            <div class="chart-title" id="anomalyChartTitle">${{axisType.toUpperCase()}} Value Anomaly Analysis</div>
+                            <div id="anomalyChart"></div>
+                        `;
+                        Plotly.newPlot('anomalyChart', result.anomaly_chart.data, result.anomaly_chart.layout, {{responsive: true}});
                     }} else {{
                         console.error('Failed to regenerate chart:', result.error);
                         alert('Failed to load chart: ' + result.error);
