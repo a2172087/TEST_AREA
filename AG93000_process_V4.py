@@ -110,7 +110,7 @@ def process_all_txt(file_path, autoz_log_timestamp):
     
     # 找出所有晶圓 ID 及其開始時間
     wafer_ids = {}
-    wafer_id_pattern = re.compile(r'(\d{2}\.\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) EX_G S : b([A-Za-z0-9]+[.-][A-Za-z0-9]+)')
+    wafer_id_pattern = re.compile(r'(\d{2}\.\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) EX_G S : b([A-Za-z0-9]+)')
     
     for line in lines:
         match = wafer_id_pattern.search(line)
