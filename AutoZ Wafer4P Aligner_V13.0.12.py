@@ -6,7 +6,7 @@ import numpy as np
 import math
 import time
 from datetime import datetime
-from flask import Flask, jsonify, request, redirect
+from flask import Flask, jsonify, request, redirect, send_from_directory
 from tkinter import Tk, filedialog
 import socket
 import threading
@@ -18,12 +18,20 @@ import json
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
+import plotly.offline
 import J750_J750EX_UFLEX_process_V3
 import ETS88_Accotest_process_V3
 import AG93000_process_V4
 import T2K_process_V1
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+# 修復高 DPI 螢幕模糊問題
+try:
+    from ctypes import windll
+    windll.shcore.SetProcessDpiAwareness(1)
+except:
+    pass
 
 # 取得使用者名稱
 username = os.environ.get('USERNAME', 'Unknown')
@@ -36,10 +44,16 @@ with open(json_path, 'r') as file:
 # SQL Server 連線資訊
 SQL_SERVER_INFO = {
     "server": sql_connection_info["server"],
-    "database": sql_connection_info["database"], 
+    "database": sql_connection_info["database"],
     "username": sql_connection_info["username"],
     "password": sql_connection_info["password"],
-    "apps_log_table": sql_connection_info["apps_log_table"]  
+    "apps_log_table": sql_connection_info["apps_log_table"]
+}
+
+# 網路資源路徑
+NETWORK_ASSETS = {
+    "font_awesome_base": r"M:\BI_Database\Apps\Database\Apps_Database\RD_All\AutoZ Wafer4P Aligner\Font_Awesome",
+    "google_fonts_base": r"M:\BI_Database\Apps\Database\Apps_Database\RD_All\AutoZ Wafer4P Aligner\Google_Fonts",
 }
 
 if hasattr(sys.stdout, 'reconfigure'):
@@ -726,6 +740,21 @@ def process_all_txt_worker(file_path, timestamp):
         return {'success': False, 'result': None, 'error': str(e)}
 
 # Flask 路由 
+@app.route('/assets/<path:filename>')
+def serve_asset(filename):
+    """提供靜態資源檔案"""
+    if filename.startswith('Font_Awesome/'):
+        base_path = NETWORK_ASSETS['font_awesome_base']
+        sub_path = filename.replace('Font_Awesome/', '')
+    elif filename.startswith('Google_Fonts/'):
+        base_path = NETWORK_ASSETS['google_fonts_base']
+        sub_path = filename.replace('Google_Fonts/', '')
+    else:
+        return "Not found", 404
+
+    return send_from_directory(base_path, sub_path)
+
+
 @app.route('/')
 def index():
     """主頁面路由"""
@@ -1124,8 +1153,8 @@ def generate_index_html():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>AutoZ Wafer4P Aligner V12.0</title>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="/assets/Google_Fonts/css/noto-sans-tc.css">
+        <link rel="stylesheet" href="/assets/Font_Awesome/css/all.min.css">
         <style>
             * {
                 margin: 0;
@@ -2176,6 +2205,9 @@ def generate_result_html(data):
     z_anomaly_fig, z_anomaly_stats = create_anomaly_chart(wafer_data, 'z', z_standard, standard_point_data)
     wafer_status_html = create_wafer_status_dashboard(wafer_data, z_standard)
 
+    # 生成 Plotly.js 內嵌程式碼（離線可用）
+    plotly_js_code = plotly.offline.get_plotlyjs()
+
     # 轉換為 HTML
     x_html = x_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
     y_html = y_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
@@ -2232,8 +2264,13 @@ def generate_result_html(data):
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>AutoZ Wafer4P Aligner - {selected_machine_type}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link rel="stylesheet" href="/assets/Google_Fonts/css/noto-sans-tc.css">
+        <link rel="stylesheet" href="/assets/Font_Awesome/css/all.min.css">
+
+        <script type="text/javascript">
+            {plotly_js_code}
+        </script>
+
         <style>
 
             body {{
