@@ -2083,14 +2083,13 @@ def generate_result_html(data):
             }}
 
             .tab {{
-                padding: 12px 24px;
+                padding: 10px 20px;
                 cursor: pointer;
                 background-color: #454545;
                 color: #E0E0E0;
                 margin-right: 5px;
                 border-radius: 8px 8px 0 0;
                 font-weight: bold;
-                font-size: 15px;
                 transition: all 0.3s ease;
             }}
 
