@@ -2419,62 +2419,62 @@ def generate_result_html(data):
             <!-- Header -->
             <div class="header">
                 <h1>AutoZ Wafer4P Aligner - {selected_machine_type}</h1>
-                <p>Data Visualization Analytics Tool</p>
-                <p>Analysis Time: {timestamp}</p>
+                <p style="font-size: 14px;">Data Visualization Analytics Tool</p>
+                <p style="font-size: 14px;">Analysis Time: {timestamp}</p>
             </div>
 
             <!-- Tab Navigation -->
             <div class="tabs">
-                <div class="tab active" onclick="showTab('info')">📊 Info</div>
-                <div class="tab" onclick="showTab('wafer-status')">📈 Wafer Status</div>
-                <div class="tab" onclick="showTab('charts')">📉 Charts</div>
+                <div class="tab active" onclick="showTab('info')">Info</div>
+                <div class="tab" onclick="showTab('wafer-status')">Wafer Status</div>
+                <div class="tab" onclick="showTab('charts')">Charts</div>
             </div>
 
             <!-- Info Tab Content -->
             <div id="info" class="tab-content active">
                 <div class="info-section">
-                    <div class="info-title">基本資訊 (Basic Information)</div>
+                    <div class="info-title">Basic Information</div>
                     <div class="info-grid">
                         <div class="info-item">
-                            <div class="info-label">機台類型 (Machine Type)</div>
+                            <div class="info-label">Machine Type</div>
                             <div class="info-value">{selected_machine_type}</div>
                         </div>
                         <div class="info-item">
-                            <div class="info-label">分析時間 (Analysis Time)</div>
+                            <div class="info-label">Analysis Time</div>
                             <div class="info-value">{timestamp}</div>
                         </div>
                         <div class="info-item">
-                            <div class="info-label">分析狀態 (Status)</div>
-                            <div class="info-value">✅ 完成</div>
+                            <div class="info-label">Status</div>
+                            <div class="info-value">Completed</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="info-section">
-                    <div class="info-title">標準值 (Standard Values)</div>
+                    <div class="info-title">Standard Values</div>
                     <div class="info-grid">
                         <div class="info-item">
-                            <div class="info-label">X 標準值 (X Standard)</div>
+                            <div class="info-label">X Standard</div>
                             <div class="info-value">{x_standard:.4f} µm</div>
                         </div>
                         <div class="info-item">
-                            <div class="info-label">Y 標準值 (Y Standard)</div>
+                            <div class="info-label">Y Standard</div>
                             <div class="info-value">{y_standard:.4f} µm</div>
                         </div>
                         <div class="info-item">
-                            <div class="info-label">Z 標準值 (Z Standard)</div>
+                            <div class="info-label">Z Standard</div>
                             <div class="info-value">{z_standard:.4f} µm</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="info-section">
-                    <div class="info-title">分析摘要 (Analysis Summary)</div>
+                    <div class="info-title">Analysis Summary</div>
                     <div class="summary-box">
-                        <p><strong>總晶圓數 (Total Wafers):</strong> {total_wafers}</p>
-                        <p><strong>總測量點數 (Total Data Points):</strong> {total_points:,}</p>
-                        <p><strong>Z 軸異常點數 (Z Axis Anomalies):</strong> {anomaly_count} ({anomaly_percent:.2f}%)</p>
-                        <p><strong>AutoZ Complete 點位:</strong> 已識別</p>
+                        <p><strong>Total Wafers:</strong> {total_wafers}</p>
+                        <p><strong>Total Data Points:</strong> {total_points:,}</p>
+                        <p><strong>Z Axis Anomalies:</strong> {anomaly_count} ({anomaly_percent:.2f}%)</p>
+                        <p><strong>AutoZ Complete Points:</strong> Identified</p>
                     </div>
                 </div>
             </div>
@@ -2492,8 +2492,8 @@ def generate_result_html(data):
                         <div class="header-left">
                             <span class="header-icon">⚙️</span>
                             <div>
-                                <div class="header-title">軸向選擇 (Axis Selection)</div>
-                                <div class="header-subtitle">選擇要顯示的座標軸圖表</div>
+                                <div class="header-title">Axis Selection</div>
+                                <div class="header-subtitle">Select axis to display chart</div>
                             </div>
                         </div>
                         <div class="axis-buttons">
@@ -2506,7 +2506,7 @@ def generate_result_html(data):
 
                 <!-- Statistics Section -->
                 <div class="statistics-container">
-                    <div class="stats-title" id="statsTitle">Z 軸數據統計 (Z Data Statistics)</div>
+                    <div class="stats-title" id="statsTitle">Z Data Statistics</div>
                     <div id="statsContent">
                         {z_stats_html}
                     </div>
@@ -2532,8 +2532,8 @@ def generate_result_html(data):
         <div class="loading-overlay" id="loadingOverlay">
             <div class="loading-content">
                 <div class="spinner"></div>
-                <div class="loading-text">載入圖表中...</div>
-                <div class="loading-subtext">請稍候，正在更新視覺化圖表</div>
+                <div class="loading-text">Loading Chart...</div>
+                <div class="loading-subtext">Please wait while we update the visualization</div>
             </div>
         </div>
 
@@ -2587,7 +2587,7 @@ def generate_result_html(data):
                     if (result.success) {{
                         // Update stats title
                         const statsTitle = document.getElementById('statsTitle');
-                        statsTitle.textContent = axisType.toUpperCase() + ' 軸數據統計 (' + axisType.toUpperCase() + ' Data Statistics)';
+                        statsTitle.textContent = axisType.toUpperCase() + ' Data Statistics';
 
                         // Update statistics data
                         const stats = result.stats;
@@ -2609,11 +2609,11 @@ def generate_result_html(data):
                         Plotly.newPlot('newChart', result.chart.data, result.chart.layout, {{responsive: true}});
                     }} else {{
                         console.error('Failed to regenerate chart:', result.error);
-                        alert('載入圖表失敗: ' + result.error);
+                        alert('Failed to load chart: ' + result.error);
                     }}
                 }} catch (error) {{
                     console.error('Error switching axis:', error);
-                    alert('載入圖表時發生錯誤，請重試。');
+                    alert('Error loading chart. Please try again.');
                 }} finally {{
                     // Hide loading
                     loadingOverlay.classList.remove('active');
