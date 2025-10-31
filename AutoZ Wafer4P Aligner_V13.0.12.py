@@ -344,15 +344,15 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
         showlegend=True,
         xaxis=dict(
             title="Sequential Index",
-            title_font=dict(family='Arial Black', size=14),
-            tickfont=dict(family='Arial Black', size=12),
+            title_font=dict(family='Arial', size=14),
+            tickfont=dict(family='Arial', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
         yaxis=dict(
             title=f"{axis_type.upper()} Value (µm)",
-            title_font=dict(family='Arial Black', size=14),
-            tickfont=dict(family='Arial Black', size=12),
+            title_font=dict(family='Arial', size=14),
+            tickfont=dict(family='Arial', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
@@ -362,7 +362,7 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
             bgcolor='rgba(255, 255, 255, 0.8)',
             bordercolor='lightgray',
             borderwidth=1,
-            font=dict(family='Arial Black', size=12)
+            font=dict(family='Arial', size=12)
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
@@ -686,15 +686,15 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
         showlegend=True,
         xaxis=dict(
             title="Sequential Index",
-            title_font=dict(family='Arial Black', size=14),
-            tickfont=dict(family='Arial Black', size=12),
+            title_font=dict(family='Arial', size=14),
+            tickfont=dict(family='Arial', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
         yaxis=dict(
             title=f"{axis_type.upper()} Value (µm)",
-            title_font=dict(family='Arial Black', size=14),
-            tickfont=dict(family='Arial Black', size=12),
+            title_font=dict(family='Arial', size=14),
+            tickfont=dict(family='Arial', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
@@ -704,7 +704,7 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
             bgcolor='rgba(255, 255, 255, 0.8)',
             bordercolor='lightgray',
             borderwidth=1,
-            font=dict(family='Arial Black', size=12)
+            font=dict(family='Arial', size=12)
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
