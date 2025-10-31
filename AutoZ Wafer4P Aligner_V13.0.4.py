@@ -1099,6 +1099,7 @@ def generate_index_html():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>AutoZ Wafer4P Aligner V12.0</title>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             * {
@@ -1108,7 +1109,7 @@ def generate_index_html():
             }
 
             body {
-                font-family: "Microsoft JhengHei", "Segoe UI", Arial, sans-serif;
+                font-family: "Noto Sans TC", "Segoe UI", Arial, sans-serif;
                 background: linear-gradient(135deg, #F5F5F5 0%, #E8E8E8 100%);
                 min-height: 100vh;
                 display: flex;
@@ -1157,18 +1158,6 @@ def generate_index_html():
                 color: #666666;
                 font-size: 15px;
                 font-weight: 400;
-            }
-
-            .version-badge {
-                display: inline-block;
-                background: linear-gradient(135deg, #4A4A4A 0%, #2C2C2C 100%);
-                color: white;
-                padding: 6px 16px;
-                border-radius: 20px;
-                font-size: 12px;
-                margin-top: 10px;
-                font-weight: 600;
-                letter-spacing: 0.5px;
             }
 
             .section {
@@ -1226,7 +1215,7 @@ def generate_index_html():
                 background: white;
                 cursor: pointer;
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-family: "Microsoft JhengHei", "Segoe UI", Arial, sans-serif;
+                font-family: "Noto Sans TC", "Segoe UI", Arial, sans-serif;
             }
 
             .form-select:hover {
@@ -1515,7 +1504,8 @@ def generate_index_html():
                 width: 42px;
                 height: 42px;
                 border-radius: 50%;
-                background: #E8E8E8;
+                background: transparent;
+                border: 3px solid #E8E8E8;
                 color: #999999;
                 display: flex;
                 align-items: center;
@@ -1529,6 +1519,7 @@ def generate_index_html():
 
             .step.active .step-circle {
                 background: linear-gradient(135deg, #4A4A4A 0%, #2C2C2C 100%);
+                border: none;
                 color: white;
                 box-shadow: 0 4px 12px rgba(44, 44, 44, 0.25);
                 transform: scale(1.1);
@@ -1536,6 +1527,7 @@ def generate_index_html():
 
             .step.completed .step-circle {
                 background: linear-gradient(135deg, #27AE60 0%, #229954 100%);
+                border: none;
                 color: white;
                 box-shadow: 0 4px 12px rgba(39, 174, 96, 0.25);
             }
@@ -1568,21 +1560,20 @@ def generate_index_html():
             <div class="header">
                 <h1>AutoZ Wafer4P Aligner</h1>
                 <p>Data Visualization Analytics Tool</p>
-                <span class="version-badge">Version 12.0</span>
             </div>
 
             <!-- 步驟指示器 -->
             <div class="step-indicator">
                 <div class="step active" id="step1">
-                    <div class="step-circle">1</div>
+                    <div class="step-circle"></div>
                     <div class="step-label">Machine</div>
                 </div>
                 <div class="step" id="step2">
-                    <div class="step-circle">2</div>
+                    <div class="step-circle"></div>
                     <div class="step-label">AutoZLog</div>
                 </div>
                 <div class="step" id="step3">
-                    <div class="step-circle">3</div>
+                    <div class="step-circle"></div>
                     <div class="step-label">ALL.txt</div>
                 </div>
             </div>
@@ -2032,6 +2023,7 @@ def generate_result_html(data):
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>AutoZ Wafer4P Aligner - {selected_machine_type}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         <script>
         function showTab(tabName) {{
@@ -2054,7 +2046,7 @@ def generate_result_html(data):
         </script>
         <style>
             body {{
-                font-family: "Microsoft JhengHei", Arial, sans-serif;
+                font-family: "Noto Sans TC", Arial, sans-serif;
                 margin: 0;
                 padding: 0;
                 background-color: #FFFFFF;
@@ -2210,7 +2202,7 @@ def generate_result_html(data):
                 font-weight: bold;
                 cursor: pointer;
                 transition: all 0.3s;
-                font-family: "Microsoft JhengHei", Arial, sans-serif;
+                font-family: "Noto Sans TC", Arial, sans-serif;
             }}
             .axis-btn:hover {{
                 background: #e0e0e0;
