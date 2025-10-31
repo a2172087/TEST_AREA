@@ -296,8 +296,8 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
             )
         )
     
-    # 僅為 Z 軸添加標準參考線
-    if standard_value is not None and axis_type == 'z':
+    # 為所有軸添加標準參考線
+    if standard_value is not None:
         x_range_start = min(continuous_x) if continuous_x else 0
         x_range_end = max(continuous_x) if continuous_x else 1
         
@@ -311,15 +311,15 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
             )
         )
         
-        # 在 Z 標準線上添加常駐標籤
+        # 在標準線上添加常駐標籤
         if continuous_x:
             x_range = x_range_end - x_range_start if x_range_end > x_range_start else 1
             x_pos = x_range_start + x_range / 2
-            
+
             fig.add_annotation(
                 x=x_pos,
                 y=standard_value,
-                text=f"Z Standard: {standard_value:.2f} µm",
+                text=f"{axis_type.upper()} Standard: {standard_value:.2f} µm",
                 showarrow=False,
                 yshift=15,
                 bgcolor="rgba(255, 255, 255, 0.8)",
@@ -1115,8 +1115,8 @@ def regenerate_chart():
         }
         standard_value = standard_map.get(axis_type)
 
-        # 根據軸類型決定主圖表是否傳入標準值（僅 Z 軸顯示標準線）
-        main_standard = standard_value if axis_type == 'z' else None
+        # 根據軸類型決定主圖表是否傳入標準值（所有軸都顯示標準線）
+        main_standard = standard_value
 
         # 生成主圖表
         main_fig, stats = create_line_chart(
