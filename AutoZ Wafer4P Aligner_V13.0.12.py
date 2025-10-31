@@ -1542,6 +1542,121 @@ def generate_index_html():
                 background: linear-gradient(135deg, #5a6268 0%, #545b62 100%);
             }
 
+            /* Toast notification */
+            .toast-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                pointer-events: none;
+            }
+
+            .toast {
+                min-width: 300px;
+                max-width: 400px;
+                padding: 16px 20px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                opacity: 0;
+                transform: translateX(400px);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                pointer-events: auto;
+                border-left: 4px solid #4A4A4A;
+            }
+
+            .toast.show {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            .toast.hide {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+
+            .toast-icon {
+                font-size: 24px;
+                flex-shrink: 0;
+            }
+
+            .toast-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .toast-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: #2C2C2C;
+                margin-bottom: 4px;
+            }
+
+            .toast-message {
+                font-size: 13px;
+                color: #666666;
+                line-height: 1.4;
+                word-wrap: break-word;
+            }
+
+            .toast-close {
+                font-size: 20px;
+                color: #999999;
+                cursor: pointer;
+                flex-shrink: 0;
+                transition: color 0.2s;
+                background: none;
+                border: none;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .toast-close:hover {
+                color: #666666;
+            }
+
+            .toast.success {
+                border-left-color: #27AE60;
+            }
+
+            .toast.success .toast-icon {
+                color: #27AE60;
+            }
+
+            .toast.error {
+                border-left-color: #E74C3C;
+            }
+
+            .toast.error .toast-icon {
+                color: #E74C3C;
+            }
+
+            .toast.warning {
+                border-left-color: #F39C12;
+            }
+
+            .toast.warning .toast-icon {
+                color: #F39C12;
+            }
+
+            .toast.info {
+                border-left-color: #3498DB;
+            }
+
+            .toast.info .toast-icon {
+                color: #3498DB;
+            }
+
             /* Step indicator */
             .step-indicator {
                 display: flex;
@@ -1831,6 +1946,9 @@ def generate_index_html():
             </div>
         </div>
 
+        <!-- Toast container -->
+        <div class="toast-container" id="toastContainer"></div>
+
         <script>
             // ========== Browser close detection mechanism ==========
 
@@ -2023,8 +2141,8 @@ def generate_index_html():
                         document.getElementById('step3').classList.add('active');
                         document.getElementById('stepIndicator').classList.remove('progress-33');
                         document.getElementById('stepIndicator').classList.add('progress-66');
-                        
-                        showSuccess('AutoZLog.txt processed successfully');
+
+                        showToast('AutoZLog.txt processed successfully', 'success', 3000);
                     } else {
                         this.disabled = false;
                         showError(processResult.error);
@@ -2148,7 +2266,78 @@ def generate_index_html():
             function closeModal(modalId) {
                 document.getElementById(modalId).classList.remove('show');
             }
-            
+
+            // Toast notification function
+            function showToast(message, type = 'success', duration = 3000) {
+                const container = document.getElementById('toastContainer');
+
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+
+                // Icon mapping
+                const icons = {
+                    success: 'fa-circle-check',
+                    error: 'fa-circle-xmark',
+                    warning: 'fa-triangle-exclamation',
+                    info: 'fa-circle-info'
+                };
+
+                const titles = {
+                    success: 'Success',
+                    error: 'Error',
+                    warning: 'Warning',
+                    info: 'Info'
+                };
+
+                toast.innerHTML = `
+                    <div class="toast-icon">
+                        <i class="fa-solid ${icons[type] || icons.info}"></i>
+                    </div>
+                    <div class="toast-content">
+                        <div class="toast-title">${titles[type] || titles.info}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                    <button class="toast-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+
+                // Add to container
+                container.appendChild(toast);
+
+                // Close button handler
+                const closeBtn = toast.querySelector('.toast-close');
+                closeBtn.addEventListener('click', () => {
+                    removeToast(toast);
+                });
+
+                // Show toast with animation
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+
+                // Auto remove
+                if (duration > 0) {
+                    setTimeout(() => {
+                        removeToast(toast);
+                    }, duration);
+                }
+
+                return toast;
+            }
+
+            function removeToast(toast) {
+                toast.classList.add('hide');
+                toast.classList.remove('show');
+
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.parentElement.removeChild(toast);
+                    }
+                }, 300);
+            }
+
             // Click modal background to close
             window.addEventListener('click', (e) => {
                 if (e.target.id === 'errorModal') {
