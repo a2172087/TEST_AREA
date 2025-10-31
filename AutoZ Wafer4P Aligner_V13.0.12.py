@@ -749,15 +749,30 @@ def result():
 @app.route('/api/heartbeat', methods=['POST'])
 def heartbeat():
     """心跳端點,用於保持活動狀態"""
-    update_activity()
-    return jsonify({'status': 'ok'})
+    try:
+        update_activity()
+        return jsonify({'success': True, 'status': 'ok'})
+    except Exception as e:
+        print(f"Error in heartbeat: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Heartbeat failed: {str(e)}'
+        })
 
 @app.route('/api/check_version', methods=['GET'])
 def api_check_version():
     """版本檢查 API"""
-    update_activity()
-    result = check_version()
-    return jsonify(result)
+    try:
+        update_activity()
+        result = check_version()
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in api_check_version: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'type': 'exception',
+            'message': f'Version check failed: {str(e)}'
+        })
 
 @app.route('/api/execute_update', methods=['POST'])
 def execute_update():
@@ -801,44 +816,52 @@ del "%~f0"
 @app.route('/api/select_machine', methods=['POST'])
 def select_machine():
     """機台選擇 API"""
-    update_activity()
-    
-    data = request.get_json()
-    machine_type = data.get('machine_type', '')
-    
-    global selected_machine_type, processor_module, autoz_log_timestamp, analysis_file_data
-    
-    # 重置狀態
-    selected_machine_type = None
-    processor_module = None
-    autoz_log_timestamp = None
-    analysis_file_data = None
-    
-    # 根據機台類型載入對應的處理模組
-    if machine_type in ['J750', 'J750EX', 'UFLEX']:
-        processor_module = J750_J750EX_UFLEX_process_V3
-        selected_machine_type = machine_type
-    elif machine_type in ['ETS88', 'Accotest']:
-        processor_module = ETS88_Accotest_process_V3
-        selected_machine_type = machine_type
-    elif machine_type == 'AG93000':
-        processor_module = AG93000_process_V4
-        selected_machine_type = machine_type
-    elif machine_type == 'T2K':
-        processor_module = T2K_process_V1
-        selected_machine_type = machine_type
-    else:
+    try:
+        update_activity()
+
+        data = request.get_json()
+        machine_type = data.get('machine_type', '')
+
+        global selected_machine_type, processor_module, autoz_log_timestamp, analysis_file_data
+
+        # 重置狀態
+        selected_machine_type = None
+        processor_module = None
+        autoz_log_timestamp = None
+        analysis_file_data = None
+
+        # 根據機台類型載入對應的處理模組
+        if machine_type in ['J750', 'J750EX', 'UFLEX']:
+            processor_module = J750_J750EX_UFLEX_process_V3
+            selected_machine_type = machine_type
+        elif machine_type in ['ETS88', 'Accotest']:
+            processor_module = ETS88_Accotest_process_V3
+            selected_machine_type = machine_type
+        elif machine_type == 'AG93000':
+            processor_module = AG93000_process_V4
+            selected_machine_type = machine_type
+        elif machine_type == 'T2K':
+            processor_module = T2K_process_V1
+            selected_machine_type = machine_type
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid machine type'
+            })
+
+        print(f"Machine type selected: {machine_type}")
+
+        return jsonify({
+            'success': True,
+            'machine_type': machine_type
+        })
+
+    except Exception as e:
+        print(f"Error in select_machine: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Invalid machine type'
+            'error': f'Failed to select machine type: {str(e)}'
         })
-    
-    print(f"Machine type selected: {machine_type}")
-    
-    return jsonify({
-        'success': True,
-        'machine_type': machine_type
-    })
 
 @app.route('/api/select_file', methods=['POST'])
 def select_file():
@@ -896,115 +919,142 @@ def select_file():
 @app.route('/api/process_autoz_log', methods=['POST'])
 def api_process_autoz_log():
     """處理 AutoZLog.txt API"""
-    update_activity()
-    
-    global autoz_log_timestamp
-    
-    data = request.get_json()
-    file_path = data.get('file_path', '')
-    
-    if not file_path:
+    try:
+        update_activity()
+
+        global autoz_log_timestamp
+
+        data = request.get_json()
+        file_path = data.get('file_path', '')
+
+        if not file_path:
+            return jsonify({
+                'success': False,
+                'error': 'No file path provided'
+            })
+
+        if not processor_module:
+            return jsonify({
+                'success': False,
+                'error': 'Please select machine type first'
+            })
+
+        print(f"Processing AutoZLog.txt: {file_path}")
+
+        result = process_autoz_log_worker(file_path)
+
+        if result['success']:
+            autoz_log_timestamp = result['timestamp']
+            print(f"AutoZLog processed successfully. Timestamp: {autoz_log_timestamp}")
+
+            return jsonify({
+                'success': True,
+                'message': 'AutoZLog.txt processed successfully'
+            })
+        else:
+            print(f"Error processing AutoZLog: {result['error']}")
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            })
+
+    except Exception as e:
+        print(f"Error in api_process_autoz_log: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'No file path provided'
-        })
-    
-    if not processor_module:
-        return jsonify({
-            'success': False,
-            'error': 'Please select machine type first'
-        })
-    
-    print(f"Processing AutoZLog.txt: {file_path}")
-    
-    result = process_autoz_log_worker(file_path)
-    
-    if result['success']:
-        autoz_log_timestamp = result['timestamp']
-        print(f"AutoZLog processed successfully. Timestamp: {autoz_log_timestamp}")
-        
-        return jsonify({
-            'success': True,
-            'message': 'AutoZLog.txt processed successfully'
-        })
-    else:
-        print(f"Error processing AutoZLog: {result['error']}")
-        return jsonify({
-            'success': False,
-            'error': result['error']
+            'error': f'Failed to process AutoZLog.txt: {str(e)}'
         })
 
 @app.route('/api/process_all_txt', methods=['POST'])
 def api_process_all_txt():
     """處理 ALL.txt API"""
-    update_activity()
-    
-    global analysis_file_data
-    
-    data = request.get_json()
-    file_path = data.get('file_path', '')
-    
-    if not file_path:
+    try:
+        update_activity()
+
+        global analysis_file_data
+
+        data = request.get_json()
+        file_path = data.get('file_path', '')
+
+        if not file_path:
+            return jsonify({
+                'success': False,
+                'error': 'No file path provided'
+            })
+
+        if not processor_module:
+            return jsonify({
+                'success': False,
+                'error': 'Please select machine type first'
+            })
+
+        if not autoz_log_timestamp:
+            return jsonify({
+                'success': False,
+                'error': 'AutoZLog timestamp not available. Please process AutoZLog.txt first.'
+            })
+
+        print(f"Processing ALL.txt: {file_path}")
+
+        result = process_all_txt_worker(file_path, autoz_log_timestamp)
+
+        if result['success']:
+            analysis_file_data = result['result']
+            print("ALL.txt processed successfully")
+
+            return jsonify({
+                'success': True,
+                'message': 'Analysis completed successfully',
+                'redirect_url': '/result'
+            })
+        else:
+            print(f"Error processing ALL.txt: {result['error']}")
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            })
+
+    except Exception as e:
+        print(f"Error in api_process_all_txt: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'No file path provided'
+            'error': f'Failed to process ALL.txt: {str(e)}'
         })
-    
-    if not processor_module:
-        return jsonify({
-            'success': False,
-            'error': 'Please select machine type first'
-        })
-    
-    if not autoz_log_timestamp:
-        return jsonify({
-            'success': False,
-            'error': 'AutoZLog timestamp not available. Please process AutoZLog.txt first.'
-        })
-    
-    print(f"Processing ALL.txt: {file_path}")
-    
-    result = process_all_txt_worker(file_path, autoz_log_timestamp)
-    
-    if result['success']:
-        analysis_file_data = result['result']
-        print("ALL.txt processed successfully")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Analysis completed successfully',
-            'redirect_url': '/result'
-        })
-    else:
-        print(f"Error processing ALL.txt: {result['error']}")
-        return jsonify({
-            'success': False,
-            'error': result['error']
-        })
+
+@app.route('/api/shutdown', methods=['POST'])
+def shutdown():
+    """立即關閉伺服器（當瀏覽器關閉時調用）"""
+    print("Browser closed, shutting down immediately...")
+
+    def delayed_shutdown():
+        time.sleep(0.5)
+        os._exit(0)
+
+    threading.Thread(target=delayed_shutdown, daemon=True).start()
+    return jsonify({'success': True})
 
 @app.route('/api/regenerate_chart', methods=['POST'])
 def regenerate_chart():
     """重新生成圖表 API (用於 X/Y/Z 軸切換)"""
-    update_activity()
-    
-    global analysis_file_data
-    
-    if analysis_file_data is None:
-        return jsonify({
-            'success': False,
-            'error': 'No analysis data available'
-        })
-    
-    data = request.get_json()
-    axis_type = data.get('axis_type', 'z').lower()
-    
-    if axis_type not in ['x', 'y', 'z']:
-        return jsonify({
-            'success': False,
-            'error': 'Invalid axis type'
-        })
-    
     try:
+        update_activity()
+
+        global analysis_file_data
+
+        if analysis_file_data is None:
+            return jsonify({
+                'success': False,
+                'error': 'No analysis data available'
+            })
+
+        data = request.get_json()
+        axis_type = data.get('axis_type', 'z').lower()
+
+        if axis_type not in ['x', 'y', 'z']:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid axis type'
+            })
         wafer_data = analysis_file_data['wafer_data']
         x_standard = analysis_file_data['x_standard']
         y_standard = analysis_file_data['y_standard']
@@ -1054,12 +1104,14 @@ def regenerate_chart():
             'stats': stats,
             'anomaly_stats': anomaly_stats
         })
-        
+
     except Exception as e:
-        print(f"Error regenerating chart: {str(e)}")
+        print(f"Error in regenerate_chart: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Failed to regenerate chart: {str(e)}'
         })
 
 def generate_index_html():
@@ -1445,7 +1497,22 @@ def generate_index_html():
                 transform: translateY(-2px);
                 box-shadow: 0 6px 16px rgba(44, 44, 44, 0.25);
             }
-            
+
+            .modal-buttons {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+            }
+
+            .modal-btn-secondary {
+                background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+                color: white;
+            }
+
+            .modal-btn-secondary:hover {
+                background: linear-gradient(135deg, #5a6268 0%, #545b62 100%);
+            }
+
             /* Step indicator */
             .step-indicator {
                 display: flex;
@@ -1705,10 +1772,104 @@ def generate_index_html():
                 <button class="modal-btn" onclick="closeModal('successModal')">OK</button>
             </div>
         </div>
-        
+
+        <!-- Message modal -->
+        <div class="modal" id="messageModal">
+            <div class="modal-content">
+                <div class="modal-icon" id="messageIcon">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <div class="modal-title" id="messageTitle">Message</div>
+                <div class="modal-message" id="messageText">Message content</div>
+                <div class="modal-buttons">
+                    <button class="modal-btn" id="messageOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm modal -->
+        <div class="modal" id="confirmModal">
+            <div class="modal-content">
+                <div class="modal-icon">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="modal-title">Confirm</div>
+                <div class="modal-message" id="confirmMessage">確認訊息</div>
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-secondary" id="confirmCancelBtn">Cancel</button>
+                    <button class="modal-btn" id="confirmOkBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+
         <script>
+            // ========== Browser close detection mechanism ==========
+
+            let isNormalNavigation = false;
+
+            window.addEventListener('beforeunload', () => {
+                if (!isNormalNavigation) {
+                    fetch('/api/shutdown', {
+                        method: 'POST',
+                        keepalive: true
+                    });
+                }
+            });
+
+            // ========== Promise-based dialog functions ==========
+
+            async function showConfirm(message, isAlert = false) {
+                return new Promise((resolve) => {
+                    const confirmModal = document.getElementById('confirmModal');
+                    const confirmMessage = document.getElementById('confirmMessage');
+                    const confirmOkBtn = document.getElementById('confirmOkBtn');
+                    const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+
+                    confirmMessage.textContent = message;
+
+                    if (isAlert) {
+                        confirmCancelBtn.style.display = 'none';
+                        confirmOkBtn.textContent = 'OK';
+                    } else {
+                        confirmCancelBtn.style.display = 'block';
+                        confirmOkBtn.textContent = 'Confirm';
+                    }
+
+                    confirmModal.classList.add('show');
+
+                    confirmOkBtn.onclick = () => {
+                        confirmModal.classList.remove('show');
+                        resolve(true);
+                    };
+
+                    confirmCancelBtn.onclick = () => {
+                        confirmModal.classList.remove('show');
+                        resolve(false);
+                    };
+                });
+            }
+
+            function showMessage(title, message, iconClass = 'fa-circle-info', iconColor = '#4A4A4A') {
+                const messageModal = document.getElementById('messageModal');
+                const messageIcon = document.getElementById('messageIcon');
+                const messageTitle = document.getElementById('messageTitle');
+                const messageText = document.getElementById('messageText');
+                const messageOkBtn = document.getElementById('messageOkBtn');
+
+                messageIcon.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+                messageIcon.style.color = iconColor;
+                messageTitle.textContent = title;
+                messageText.textContent = message;
+
+                messageModal.classList.add('show');
+
+                messageOkBtn.onclick = () => {
+                    messageModal.classList.remove('show');
+                };
+            }
+
             // ========== Version check mechanism ==========
-            
+
             async function checkVersionOnStartup() {
                 try {
                     const response = await fetch('/api/check_version');
@@ -1887,7 +2048,8 @@ def generate_index_html():
                         document.getElementById('step3').classList.add('completed');
                         document.getElementById('stepIndicator').classList.remove('progress-66');
                         document.getElementById('stepIndicator').classList.add('progress-100');
-                        
+
+                        isNormalNavigation = true;  // 標記為正常跳轉
                         window.location.href = processResult.redirect_url;
                     } else {
                         this.disabled = false;
@@ -1965,6 +2127,12 @@ def generate_index_html():
                 }
                 if (e.target.id === 'successModal') {
                     document.getElementById('successModal').classList.remove('show');
+                }
+                if (e.target.id === 'messageModal') {
+                    document.getElementById('messageModal').classList.remove('show');
+                }
+                if (e.target.id === 'confirmModal') {
+                    document.getElementById('confirmModal').classList.remove('show');
                 }
             });
             
@@ -2527,6 +2695,19 @@ def generate_result_html(data):
         </div>
 
         <script>
+            // ========== Browser close detection mechanism ==========
+
+            let isNormalNavigation = false;
+
+            window.addEventListener('beforeunload', () => {{
+                if (!isNormalNavigation) {{
+                    fetch('/api/shutdown', {{
+                        method: 'POST',
+                        keepalive: true
+                    }});
+                }}
+            }});
+
             // Tab switching function
             function showTab(tabName) {{
                 // Hide all tab contents
