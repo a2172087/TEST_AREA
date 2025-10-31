@@ -1959,247 +1959,226 @@ def generate_index_html():
 
 
 def generate_result_html(data):
-    """生成結果頁面 HTML"""
-    
+    """生成結果頁面 HTML - 使用 V12.0 設計風格"""
+
     wafer_data = data['wafer_data']
     x_standard = data['x_standard']
     y_standard = data['y_standard']
     z_standard = data['z_standard']
-    
+
     # 準備 AutoZ complete 點位資料
     standard_point_data = {
         'x': x_standard,
         'y': y_standard,
         'z': z_standard
     }
-    
-    # 生成所有圖表
+
+    # 為所有三個軸生成圖表(包含 AutoZ complete 點位)
     x_fig, x_stats = create_line_chart(wafer_data, 'x', x_standard, standard_point_data)
     y_fig, y_stats = create_line_chart(wafer_data, 'y', y_standard, standard_point_data)
     z_fig, z_stats = create_line_chart(wafer_data, 'z', z_standard, standard_point_data)
+
+    # 生成新的圖表(包含 AutoZ complete 點位)
     z_anomaly_fig, z_anomaly_stats = create_z_anomaly_chart(wafer_data, z_standard, standard_point_data)
     wafer_status_html = create_wafer_status_dashboard(wafer_data, z_standard)
-    
-    # 準備圖表資料
-    charts_data = {
-        'x_chart': x_fig.to_dict(),
-        'y_chart': y_fig.to_dict(),
-        'z_chart': z_fig.to_dict(),
-        'z_anomaly_chart': z_anomaly_fig.to_dict(),
-        'x_stats': x_stats,
-        'y_stats': y_stats,
-        'z_stats': z_stats,
-        'z_anomaly_stats': z_anomaly_stats
-    }
-    
+
+    # 轉換為 HTML
+    x_html = x_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
+    y_html = y_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
+    z_html = z_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
+    z_anomaly_html = z_anomaly_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
+
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+
+    # 創建統計 HTML
+    x_stats_html = f'''
+    <div class="statistics-box">
+        <div class="stat-item"><span class="stat-label">X Min:</span> <span class="stat-value">{x_stats['min']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">X Max:</span> <span class="stat-value">{x_stats['max']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">X Mean:</span> <span class="stat-value">{x_stats['mean']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">X Median:</span> <span class="stat-value">{x_stats['median']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">X Std Dev:</span> <span class="stat-value">{x_stats['std']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Data Points:</span> <span class="stat-value">{x_stats['count']:,}</span></div>
+    </div>
+    '''
+
+    y_stats_html = f'''
+    <div class="statistics-box">
+        <div class="stat-item"><span class="stat-label">Y Min:</span> <span class="stat-value">{y_stats['min']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Y Max:</span> <span class="stat-value">{y_stats['max']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Y Mean:</span> <span class="stat-value">{y_stats['mean']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Y Median:</span> <span class="stat-value">{y_stats['median']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Y Std Dev:</span> <span class="stat-value">{y_stats['std']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Data Points:</span> <span class="stat-value">{y_stats['count']:,}</span></div>
+    </div>
+    '''
+
+    z_stats_html = f'''
+    <div class="statistics-box">
+        <div class="stat-item"><span class="stat-label">Z Min:</span> <span class="stat-value">{z_stats['min']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Z Max:</span> <span class="stat-value">{z_stats['max']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Z Mean:</span> <span class="stat-value">{z_stats['mean']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Z Median:</span> <span class="stat-value">{z_stats['median']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Z Std Dev:</span> <span class="stat-value">{z_stats['std']:.4f} µm</span></div>
+        <div class="stat-item"><span class="stat-label">Data Points:</span> <span class="stat-value">{z_stats['count']:,}</span></div>
+    </div>
+    '''
+
+    # 創建完整的 HTML 與標籤頁 - 使用 V12.0 的設計風格
     html = f'''
     <!DOCTYPE html>
-    <html lang="zh-TW">
+    <html>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AutoZ Analysis Results - {selected_machine_type}</title>
+        <title>AutoZ Wafer4P Aligner - {selected_machine_type}</title>
         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <script>
+        function showTab(tabName) {{
+            // 隱藏所有標籤頁內容
+            var tabContents = document.getElementsByClassName("tab-content");
+            for (var i = 0; i < tabContents.length; i++) {{
+                tabContents[i].style.display = "none";
+            }}
+
+            // 移除所有標籤按鈕的活動類
+            var tabButtons = document.getElementsByClassName("tab-button");
+            for (var i = 0; i < tabButtons.length; i++) {{
+                tabButtons[i].classList.remove("active");
+            }}
+
+            // 顯示選定的標籤頁內容並將按鈕標記為活動
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById("btn-" + tabName).classList.add("active");
+        }}
+        </script>
         <style>
-            * {{
+            body {{
+                font-family: "Microsoft JhengHei", Arial, sans-serif;
                 margin: 0;
                 padding: 0;
-                box-sizing: border-box;
+                background-color: #FFFFFF;
             }}
-            
-            body {{
-                font-family: "Microsoft JhengHei", "Segoe UI", Arial, sans-serif;
-                background-color: #f5f5f5;
-                padding: 20px;
-            }}
-            
             .container {{
-                max-width: 1400px;
-                margin: 0 auto;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                overflow: hidden;
+                width: 95%;
+                margin: 20px auto;
             }}
-            
             .header {{
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 30px;
+                background-color: #2D2D2D;
+                color: #E0E0E0;
+                padding: 15px 15px 10px 15px;
                 text-align: center;
+                border-radius: 8px 8px 0 0;
+                margin-bottom: 0;
             }}
-            
-            .header h1 {{
-                font-size: 28px;
-                margin-bottom: 5px;
-            }}
-            
-            .header p {{
-                font-size: 14px;
-                opacity: 0.9;
-            }}
-            
             .timestamp {{
                 font-size: 12px;
+                color: #AAAAAA;
                 text-align: right;
-                padding: 10px 30px;
-                background: #f8f9fa;
-                border-bottom: 1px solid #e0e0e0;
+                padding: 0 20px 10px 0;
+                margin: 0;
+                background-color: #2D2D2D;
             }}
-            
-            .tabs {{
+            .tab-buttons {{
                 display: flex;
-                background: #f8f9fa;
-                border-bottom: 2px solid #e0e0e0;
-                padding: 0 30px;
+                justify-content: center;
+                padding: 10px;
+                background-color: #333;
+                border-bottom-left-radius: 8px;
+                border-bottom-right-radius: 8px;
             }}
-            
-            .tab {{
-                padding: 15px 30px;
+            .tab-button {{
+                background: #454545;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 10px 20px;
+                margin: 0 10px;
+                font-size: 16px;
+                font-weight: bold;
                 cursor: pointer;
-                font-weight: 600;
-                color: #666;
-                border-bottom: 3px solid transparent;
-                transition: all 0.3s ease;
+                transition: background 0.3s;
             }}
-            
-            .tab:hover {{
-                color: #667eea;
+            .tab-button:hover {{
+                background: #555;
             }}
-            
-            .tab.active {{
-                color: #667eea;
-                border-bottom-color: #667eea;
-                background: white;
+            .tab-button.active {{
+                background: #93aec1;
             }}
-            
             .tab-content {{
                 display: none;
-                padding: 30px;
+                margin-top: 20px;
             }}
-            
-            .tab-content.active {{
-                display: block;
-            }}
-            
-            .chart-controls {{
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-                padding: 20px;
-                background: #f8f9fa;
-                border-radius: 8px;
-            }}
-            
-            .chart-title {{
-                font-size: 20px;
-                font-weight: 600;
-                color: #333;
-            }}
-            
-            .axis-selector {{
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }}
-            
-            .axis-selector label {{
-                font-weight: 600;
-                color: #666;
-            }}
-            
-            .axis-selector select {{
-                padding: 8px 15px;
-                border: 2px solid #e0e0e0;
-                border-radius: 6px;
-                font-size: 14px;
-                cursor: pointer;
-                background: white;
-                min-width: 120px;
-            }}
-            
-            .axis-selector select:focus {{
-                outline: none;
-                border-color: #667eea;
-            }}
-            
             .chart-container {{
-                margin-bottom: 30px;
-                padding: 20px;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            }}
-            
-            .stats-container {{
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                margin-bottom: 20px;
-            }}
-            
-            .stat-card {{
-                background: #f8f9fa;
+                margin: 20px auto;
                 padding: 15px;
+                background-color: white;
                 border-radius: 8px;
-                text-align: center;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                width: 100%;
+                max-width: 1200px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }}
-            
-            .stat-label {{
-                font-size: 12px;
-                color: #666;
-                margin-bottom: 5px;
-                font-weight: 600;
-                text-transform: uppercase;
+            .js-plotly-plot, .plot-container {{
+                width: 100% !important;
+                max-width: 1100px !important;
+                margin: 0 auto !important;
             }}
-            
-            .stat-value {{
-                font-size: 20px;
-                font-weight: 700;
-                color: #333;
-            }}
-            
-            .loading {{
-                display: none;
-                text-align: center;
-                padding: 40px;
-            }}
-            
-            .loading.show {{
-                display: block;
-            }}
-            
-            .loading-spinner {{
-                width: 50px;
-                height: 50px;
-                border: 5px solid #f3f3f3;
-                border-top: 5px solid #667eea;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin: 0 auto 15px;
-            }}
-            
-            @keyframes spin {{
-                0% {{ transform: rotate(0deg); }}
-                100% {{ transform: rotate(360deg); }}
-            }}
-            
-            .section-divider {{
-                height: 2px;
-                background: #e0e0e0;
-                margin: 30px 0;
-            }}
-            
             .footer {{
                 text-align: center;
-                padding: 20px;
-                background: #f8f9fa;
-                border-top: 1px solid #e0e0e0;
-                color: #666;
                 font-size: 12px;
+                color: #888;
+                padding: 20px;
+                margin-top: 20px;
+                border-top: 1px solid #ddd;
+            }}
+            .statistics-container {{
+                margin: 20px auto;
+                padding: 15px;
+                background-color: #f8f9fa;
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                width: 100%;
+                max-width: 1200px;
+            }}
+            .statistics-box {{
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-around;
+                padding: 10px;
+            }}
+            .stat-item {{
+                padding: 10px;
+                margin: 5px;
+                background-color: white;
+                border-radius: 5px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                min-width: 150px;
+                text-align: center;
+            }}
+            .stat-label {{
+                font-weight: bold;
+                display: block;
+                margin-bottom: 5px;
+                color: #555;
+            }}
+            .stat-value {{
+                font-size: 18px;
+                color: #333;
+            }}
+            .stats-title {{
+                text-align: center;
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 10px;
+                color: #333;
+            }}
+            .section-divider {{
+                border-top: 1px solid #ddd;
+                margin: 30px 0;
+                width: 100%;
             }}
         </style>
     </head>
@@ -2209,191 +2188,82 @@ def generate_result_html(data):
                 <h1>AutoZ Wafer4P Aligner - {selected_machine_type}</h1>
                 <p>Data Visualization Analytics Tool</p>
             </div>
-            
+
             <div class="timestamp">
                 Generated on: {timestamp}
             </div>
-            
-            <div class="tabs">
-                <div class="tab" onclick="showTab('wafer-status')">Wafer Status</div>
-                <div class="tab active" onclick="showTab('chart')">Chart</div>
+
+            <div class="tab-buttons">
+                <button id="btn-wafer-status" class="tab-button" onclick="showTab('wafer-status')">Wafer Status</button>
+                <button id="btn-z-tab" class="tab-button active" onclick="showTab('z-tab')">Z Value</button>
+                <button id="btn-x-tab" class="tab-button" onclick="showTab('x-tab')">X Value</button>
+                <button id="btn-y-tab" class="tab-button" onclick="showTab('y-tab')">Y Value</button>
             </div>
-            
-            <!-- Wafer Status Tab -->
+
+            <!-- Wafer Status Dashboard Tab -->
             <div id="wafer-status" class="tab-content">
                 {wafer_status_html}
             </div>
-            
-            <!-- Chart Tab -->
-            <div id="chart" class="tab-content active">
-                <!-- X/Y/Z 圖表區域 -->
-                <div class="chart-controls">
-                    <div class="chart-title">AutoZ Values</div>
-                    <div class="axis-selector">
-                        <label>Select Axis:</label>
-                        <select id="axisSelector">
-                            <option value="z" selected>Z Axis</option>
-                            <option value="x">X Axis</option>
-                            <option value="y">Y Axis</option>
-                        </select>
-                    </div>
+
+            <!-- Z Tab Content -->
+            <div id="z-tab" class="tab-content">
+                <!-- 1. Z Data Statistics (置頂) -->
+                <div class="statistics-container">
+                    <div class="stats-title">Z Data Statistics</div>
+                    {z_stats_html}
                 </div>
-                
-                <!-- 統計數據 -->
-                <div class="stats-container" id="statsContainer">
-                    <div class="stat-card">
-                        <div class="stat-label">Min</div>
-                        <div class="stat-value" id="statMin">{z_stats['min']:.4f} µm</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Max</div>
-                        <div class="stat-value" id="statMax">{z_stats['max']:.4f} µm</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Mean</div>
-                        <div class="stat-value" id="statMean">{z_stats['mean']:.4f} µm</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Median</div>
-                        <div class="stat-value" id="statMedian">{z_stats['median']:.4f} µm</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Std Dev</div>
-                        <div class="stat-value" id="statStd">{z_stats['std']:.4f} µm</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Data Points</div>
-                        <div class="stat-value" id="statCount">{z_stats['count']:,}</div>
-                    </div>
-                </div>
-                
-                <!-- 圖表容器 -->
+
+                <!-- 2. Z AutoZ Values 圖表 -->
                 <div class="chart-container">
-                    <div id="chart-container"></div>
+                    {z_html}
                 </div>
-                
+
                 <div class="section-divider"></div>
-                
-                <!-- Z Anomaly Analysis -->
+
+                <!-- 3. Z Value Anomaly Analysis 圖表 (不顯示統計數據) -->
                 <div class="chart-container">
-                    <div class="chart-title" style="margin-bottom: 20px;">Z Value Anomaly Analysis</div>
-                    <div id="z-anomaly-container"></div>
-                </div>
-                
-                <!-- Loading 動畫 -->
-                <div class="loading" id="loading">
-                    <div class="loading-spinner"></div>
-                    <div>Loading chart...</div>
+                    <div class="chart-title" style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;">
+                        Z Value Anomaly Analysis
+                    </div>
+                    {z_anomaly_html}
                 </div>
             </div>
-            
+
+            <!-- X Tab Content -->
+            <div id="x-tab" class="tab-content">
+                <div class="statistics-container">
+                    <div class="stats-title">X Data Statistics</div>
+                    {x_stats_html}
+                </div>
+
+                <div class="chart-container">
+                    {x_html}
+                </div>
+            </div>
+
+            <!-- Y Tab Content -->
+            <div id="y-tab" class="tab-content">
+                <div class="statistics-container">
+                    <div class="stats-title">Y Data Statistics</div>
+                    {y_stats_html}
+                </div>
+
+                <div class="chart-container">
+                    {y_html}
+                </div>
+            </div>
+
             <div class="footer">
                 AutoZ Wafer4P Aligner | Document automatically generated
             </div>
         </div>
-        
+
         <script>
-            // 儲存所有圖表資料
-            const initialCharts = {{
-                x_chart: {json.dumps(charts_data['x_chart'])},
-                y_chart: {json.dumps(charts_data['y_chart'])},
-                z_chart: {json.dumps(charts_data['z_chart'])},
-                z_anomaly_chart: {json.dumps(charts_data['z_anomaly_chart'])},
-                x_stats: {json.dumps(charts_data['x_stats'])},
-                y_stats: {json.dumps(charts_data['y_stats'])},
-                z_stats: {json.dumps(charts_data['z_stats'])},
-                z_anomaly_stats: {json.dumps(charts_data['z_anomaly_stats'])}
-            }};
-            
-            // 初始化圖表 (預設顯示 Z 軸)
-            Plotly.newPlot('chart-container', 
-                          initialCharts.z_chart.data, 
-                          initialCharts.z_chart.layout, 
-                          initialCharts.z_chart.config);
-            
-            Plotly.newPlot('z-anomaly-container',
-                          initialCharts.z_anomaly_chart.data,
-                          initialCharts.z_anomaly_chart.layout,
-                          initialCharts.z_anomaly_chart.config);
-            
-            // Tab 切換功能
-            function showTab(tabName) {{
-                // 隱藏所有 tab content
-                const tabContents = document.querySelectorAll('.tab-content');
-                tabContents.forEach(content => {{
-                    content.classList.remove('active');
-                }});
-                
-                // 移除所有 tab active 狀態
-                const tabs = document.querySelectorAll('.tab');
-                tabs.forEach(tab => {{
-                    tab.classList.remove('active');
-                }});
-                
-                // 顯示選定的 tab
-                document.getElementById(tabName).classList.add('active');
-                
-                // 設定對應的 tab 為 active
-                event.target.classList.add('active');
-            }}
-            
-            // 軸選擇器事件監聽
-            document.getElementById('axisSelector').addEventListener('change', async (e) => {{
-                const selectedAxis = e.target.value;
-                await updateChart(selectedAxis);
+            // 頁面載入時默認顯示 Z 標籤頁
+            document.addEventListener('DOMContentLoaded', function() {{
+                showTab('z-tab');
             }});
-            
-            // 更新圖表函數
-            async function updateChart(axisType) {{
-                showLoading();
-                
-                try {{
-                    const response = await fetch('/api/regenerate_chart', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ axis_type: axisType }})
-                    }});
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {{
-                        Plotly.react('chart-container',
-                                    result.chart.data,
-                                    result.chart.layout,
-                                    result.chart.config);
-                        
-                        updateStats(result.stats);
-                    }} else {{
-                        alert('Error updating chart: ' + result.error);
-                    }}
-                }} catch (error) {{
-                    alert('Failed to update chart: ' + error);
-                }} finally {{
-                    hideLoading();
-                }}
-            }}
-            
-            // 更新統計數據
-            function updateStats(stats) {{
-                document.getElementById('statMin').textContent = stats.min.toFixed(4) + ' µm';
-                document.getElementById('statMax').textContent = stats.max.toFixed(4) + ' µm';
-                document.getElementById('statMean').textContent = stats.mean.toFixed(4) + ' µm';
-                document.getElementById('statMedian').textContent = stats.median.toFixed(4) + ' µm';
-                document.getElementById('statStd').textContent = stats.std.toFixed(4) + ' µm';
-                document.getElementById('statCount').textContent = stats.count.toLocaleString();
-            }}
-            
-            // 顯示/隱藏 Loading
-            function showLoading() {{
-                document.getElementById('loading').classList.add('show');
-                document.getElementById('chart-container').style.opacity = '0.5';
-            }}
-            
-            function hideLoading() {{
-                document.getElementById('loading').classList.remove('show');
-                document.getElementById('chart-container').style.opacity = '1';
-            }}
-            
+
             // 心跳機制
             setInterval(() => {{
                 fetch('/api/heartbeat', {{
@@ -2407,7 +2277,7 @@ def generate_result_html(data):
     </body>
     </html>
     '''
-    
+
     return html
 
 
