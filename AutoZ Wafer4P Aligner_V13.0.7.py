@@ -328,24 +328,24 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
         width=1100,
         height=600,
         title=dict(
-            text=f"{axis_type.upper()} AutoZ Values",
+            text=f"{axis_type.upper()} AutoZ Values" if axis_type != 'z' else "",
             x=0.5,
             y=0.98,
             xanchor='center',
             yanchor='top',
             font=dict(family='Microsoft JhengHei', size=18, weight='bold')
-        ),
+        ) if axis_type != 'z' else None,
         xaxis=dict(
             title="Sequential Index",
             title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
-            tickfont=dict(family='Microsoft JhengHei', size=12),
+            tickfont=dict(family='Microsoft JhengHei', size=12, weight='bold'),
             showgrid=True,
             gridcolor='lightgray'
         ),
         yaxis=dict(
             title=f"{axis_type.upper()} Value (µm)",
             title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
-            tickfont=dict(family='Microsoft JhengHei', size=12),
+            tickfont=dict(family='Microsoft JhengHei', size=12, weight='bold'),
             showgrid=True,
             gridcolor='lightgray'
         ),
@@ -355,7 +355,7 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
             bgcolor='rgba(255, 255, 255, 0.8)',
             bordercolor='lightgray',
             borderwidth=1,
-            font=dict(family='Microsoft JhengHei', size=12)
+            font=dict(family='Microsoft JhengHei', size=12, weight='bold')
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
@@ -685,14 +685,14 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
         xaxis=dict(
             title="Sequential Index",
             title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
-            tickfont=dict(family='Microsoft JhengHei', size=12),
+            tickfont=dict(family='Microsoft JhengHei', size=12, weight='bold'),
             showgrid=True,
             gridcolor='lightgray'
         ),
         yaxis=dict(
             title="Z Value (µm)",
             title_font=dict(family='Microsoft JhengHei', size=14, weight='bold'),
-            tickfont=dict(family='Microsoft JhengHei', size=12),
+            tickfont=dict(family='Microsoft JhengHei', size=12, weight='bold'),
             showgrid=True,
             gridcolor='lightgray'
         ),
@@ -702,7 +702,7 @@ def create_z_anomaly_chart(wafer_data, z_standard, standard_point_data=None):
             bgcolor='rgba(255, 255, 255, 0.8)',
             bordercolor='lightgray',
             borderwidth=1,
-            font=dict(family='Microsoft JhengHei', size=12)
+            font=dict(family='Microsoft JhengHei', size=12, weight='bold')
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
@@ -2082,7 +2082,7 @@ def generate_result_html(data):
             .header {{
                 background-color: #2D2D2D;
                 color: #E0E0E0;
-                padding: 20px 15px;
+                padding: 30px 15px;
                 text-align: center;
                 border-radius: 8px 8px 0 0;
                 margin-bottom: -10px;
