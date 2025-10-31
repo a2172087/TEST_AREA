@@ -6,7 +6,7 @@ import numpy as np
 import math
 import time
 from datetime import datetime
-from flask import Flask, jsonify, request, redirect
+from flask import Flask, jsonify, request, redirect, send_from_directory
 from tkinter import Tk, filedialog
 import socket
 import threading
@@ -18,12 +18,20 @@ import json
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
+import plotly.offline
 import J750_J750EX_UFLEX_process_V3
 import ETS88_Accotest_process_V3
 import AG93000_process_V4
 import T2K_process_V1
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+# 修復高 DPI 螢幕模糊問題
+try:
+    from ctypes import windll
+    windll.shcore.SetProcessDpiAwareness(1)
+except:
+    pass
 
 # 取得使用者名稱
 username = os.environ.get('USERNAME', 'Unknown')
@@ -36,10 +44,16 @@ with open(json_path, 'r') as file:
 # SQL Server 連線資訊
 SQL_SERVER_INFO = {
     "server": sql_connection_info["server"],
-    "database": sql_connection_info["database"], 
+    "database": sql_connection_info["database"],
     "username": sql_connection_info["username"],
     "password": sql_connection_info["password"],
-    "apps_log_table": sql_connection_info["apps_log_table"]  
+    "apps_log_table": sql_connection_info["apps_log_table"]
+}
+
+# 網路資源路徑
+NETWORK_ASSETS = {
+    "font_awesome_base": r"M:\BI_Database\Apps\Database\Apps_Database\RD_All\AutoZ Wafer4P Aligner\Font_Awesome",
+    "google_fonts_base": r"M:\BI_Database\Apps\Database\Apps_Database\RD_All\AutoZ Wafer4P Aligner\Google_Fonts",
 }
 
 if hasattr(sys.stdout, 'reconfigure'):
@@ -330,15 +344,15 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
         showlegend=True,
         xaxis=dict(
             title="Sequential Index",
-            title_font=dict(family='Arial Black', size=14),
-            tickfont=dict(family='Arial Black', size=12),
+            title_font=dict(family='Arial', size=14),
+            tickfont=dict(family='Arial', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
         yaxis=dict(
             title=f"{axis_type.upper()} Value (µm)",
-            title_font=dict(family='Arial Black', size=14),
-            tickfont=dict(family='Arial Black', size=12),
+            title_font=dict(family='Arial', size=14),
+            tickfont=dict(family='Arial', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
@@ -348,7 +362,7 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
             bgcolor='rgba(255, 255, 255, 0.8)',
             bordercolor='lightgray',
             borderwidth=1,
-            font=dict(family='Arial Black', size=12)
+            font=dict(family='Arial', size=12)
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
@@ -672,15 +686,15 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
         showlegend=True,
         xaxis=dict(
             title="Sequential Index",
-            title_font=dict(family='Arial Black', size=14),
-            tickfont=dict(family='Arial Black', size=12),
+            title_font=dict(family='Arial', size=14),
+            tickfont=dict(family='Arial', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
         yaxis=dict(
             title=f"{axis_type.upper()} Value (µm)",
-            title_font=dict(family='Arial Black', size=14),
-            tickfont=dict(family='Arial Black', size=12),
+            title_font=dict(family='Arial', size=14),
+            tickfont=dict(family='Arial', size=12),
             showgrid=True,
             gridcolor='lightgray'
         ),
@@ -690,7 +704,7 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
             bgcolor='rgba(255, 255, 255, 0.8)',
             bordercolor='lightgray',
             borderwidth=1,
-            font=dict(family='Arial Black', size=12)
+            font=dict(family='Arial', size=12)
         ),
         plot_bgcolor='white',
         paper_bgcolor='white',
@@ -726,6 +740,21 @@ def process_all_txt_worker(file_path, timestamp):
         return {'success': False, 'result': None, 'error': str(e)}
 
 # Flask 路由 
+@app.route('/assets/<path:filename>')
+def serve_asset(filename):
+    """提供靜態資源檔案"""
+    if filename.startswith('Font_Awesome/'):
+        base_path = NETWORK_ASSETS['font_awesome_base']
+        sub_path = filename.replace('Font_Awesome/', '')
+    elif filename.startswith('Google_Fonts/'):
+        base_path = NETWORK_ASSETS['google_fonts_base']
+        sub_path = filename.replace('Google_Fonts/', '')
+    else:
+        return "Not found", 404
+
+    return send_from_directory(base_path, sub_path)
+
+
 @app.route('/')
 def index():
     """主頁面路由"""
@@ -749,15 +778,30 @@ def result():
 @app.route('/api/heartbeat', methods=['POST'])
 def heartbeat():
     """心跳端點,用於保持活動狀態"""
-    update_activity()
-    return jsonify({'status': 'ok'})
+    try:
+        update_activity()
+        return jsonify({'success': True, 'status': 'ok'})
+    except Exception as e:
+        print(f"Error in heartbeat: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Heartbeat failed: {str(e)}'
+        })
 
 @app.route('/api/check_version', methods=['GET'])
 def api_check_version():
     """版本檢查 API"""
-    update_activity()
-    result = check_version()
-    return jsonify(result)
+    try:
+        update_activity()
+        result = check_version()
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in api_check_version: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'type': 'exception',
+            'message': f'Version check failed: {str(e)}'
+        })
 
 @app.route('/api/execute_update', methods=['POST'])
 def execute_update():
@@ -801,44 +845,52 @@ del "%~f0"
 @app.route('/api/select_machine', methods=['POST'])
 def select_machine():
     """機台選擇 API"""
-    update_activity()
-    
-    data = request.get_json()
-    machine_type = data.get('machine_type', '')
-    
-    global selected_machine_type, processor_module, autoz_log_timestamp, analysis_file_data
-    
-    # 重置狀態
-    selected_machine_type = None
-    processor_module = None
-    autoz_log_timestamp = None
-    analysis_file_data = None
-    
-    # 根據機台類型載入對應的處理模組
-    if machine_type in ['J750', 'J750EX', 'UFLEX']:
-        processor_module = J750_J750EX_UFLEX_process_V3
-        selected_machine_type = machine_type
-    elif machine_type in ['ETS88', 'Accotest']:
-        processor_module = ETS88_Accotest_process_V3
-        selected_machine_type = machine_type
-    elif machine_type == 'AG93000':
-        processor_module = AG93000_process_V4
-        selected_machine_type = machine_type
-    elif machine_type == 'T2K':
-        processor_module = T2K_process_V1
-        selected_machine_type = machine_type
-    else:
+    try:
+        update_activity()
+
+        data = request.get_json()
+        machine_type = data.get('machine_type', '')
+
+        global selected_machine_type, processor_module, autoz_log_timestamp, analysis_file_data
+
+        # 重置狀態
+        selected_machine_type = None
+        processor_module = None
+        autoz_log_timestamp = None
+        analysis_file_data = None
+
+        # 根據機台類型載入對應的處理模組
+        if machine_type in ['J750', 'J750EX', 'UFLEX']:
+            processor_module = J750_J750EX_UFLEX_process_V3
+            selected_machine_type = machine_type
+        elif machine_type in ['ETS88', 'Accotest']:
+            processor_module = ETS88_Accotest_process_V3
+            selected_machine_type = machine_type
+        elif machine_type == 'AG93000':
+            processor_module = AG93000_process_V4
+            selected_machine_type = machine_type
+        elif machine_type == 'T2K':
+            processor_module = T2K_process_V1
+            selected_machine_type = machine_type
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid machine type'
+            })
+
+        print(f"Machine type selected: {machine_type}")
+
+        return jsonify({
+            'success': True,
+            'machine_type': machine_type
+        })
+
+    except Exception as e:
+        print(f"Error in select_machine: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Invalid machine type'
+            'error': f'Failed to select machine type: {str(e)}'
         })
-    
-    print(f"Machine type selected: {machine_type}")
-    
-    return jsonify({
-        'success': True,
-        'machine_type': machine_type
-    })
 
 @app.route('/api/select_file', methods=['POST'])
 def select_file():
@@ -896,115 +948,142 @@ def select_file():
 @app.route('/api/process_autoz_log', methods=['POST'])
 def api_process_autoz_log():
     """處理 AutoZLog.txt API"""
-    update_activity()
-    
-    global autoz_log_timestamp
-    
-    data = request.get_json()
-    file_path = data.get('file_path', '')
-    
-    if not file_path:
+    try:
+        update_activity()
+
+        global autoz_log_timestamp
+
+        data = request.get_json()
+        file_path = data.get('file_path', '')
+
+        if not file_path:
+            return jsonify({
+                'success': False,
+                'error': 'No file path provided'
+            })
+
+        if not processor_module:
+            return jsonify({
+                'success': False,
+                'error': 'Please select machine type first'
+            })
+
+        print(f"Processing AutoZLog.txt: {file_path}")
+
+        result = process_autoz_log_worker(file_path)
+
+        if result['success']:
+            autoz_log_timestamp = result['timestamp']
+            print(f"AutoZLog processed successfully. Timestamp: {autoz_log_timestamp}")
+
+            return jsonify({
+                'success': True,
+                'message': 'AutoZLog.txt processed successfully'
+            })
+        else:
+            print(f"Error processing AutoZLog: {result['error']}")
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            })
+
+    except Exception as e:
+        print(f"Error in api_process_autoz_log: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'No file path provided'
-        })
-    
-    if not processor_module:
-        return jsonify({
-            'success': False,
-            'error': 'Please select machine type first'
-        })
-    
-    print(f"Processing AutoZLog.txt: {file_path}")
-    
-    result = process_autoz_log_worker(file_path)
-    
-    if result['success']:
-        autoz_log_timestamp = result['timestamp']
-        print(f"AutoZLog processed successfully. Timestamp: {autoz_log_timestamp}")
-        
-        return jsonify({
-            'success': True,
-            'message': 'AutoZLog.txt processed successfully'
-        })
-    else:
-        print(f"Error processing AutoZLog: {result['error']}")
-        return jsonify({
-            'success': False,
-            'error': result['error']
+            'error': f'Failed to process AutoZLog.txt: {str(e)}'
         })
 
 @app.route('/api/process_all_txt', methods=['POST'])
 def api_process_all_txt():
     """處理 ALL.txt API"""
-    update_activity()
-    
-    global analysis_file_data
-    
-    data = request.get_json()
-    file_path = data.get('file_path', '')
-    
-    if not file_path:
+    try:
+        update_activity()
+
+        global analysis_file_data
+
+        data = request.get_json()
+        file_path = data.get('file_path', '')
+
+        if not file_path:
+            return jsonify({
+                'success': False,
+                'error': 'No file path provided'
+            })
+
+        if not processor_module:
+            return jsonify({
+                'success': False,
+                'error': 'Please select machine type first'
+            })
+
+        if not autoz_log_timestamp:
+            return jsonify({
+                'success': False,
+                'error': 'AutoZLog timestamp not available. Please process AutoZLog.txt first.'
+            })
+
+        print(f"Processing ALL.txt: {file_path}")
+
+        result = process_all_txt_worker(file_path, autoz_log_timestamp)
+
+        if result['success']:
+            analysis_file_data = result['result']
+            print("ALL.txt processed successfully")
+
+            return jsonify({
+                'success': True,
+                'message': 'Analysis completed successfully',
+                'redirect_url': '/result'
+            })
+        else:
+            print(f"Error processing ALL.txt: {result['error']}")
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            })
+
+    except Exception as e:
+        print(f"Error in api_process_all_txt: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'No file path provided'
+            'error': f'Failed to process ALL.txt: {str(e)}'
         })
-    
-    if not processor_module:
-        return jsonify({
-            'success': False,
-            'error': 'Please select machine type first'
-        })
-    
-    if not autoz_log_timestamp:
-        return jsonify({
-            'success': False,
-            'error': 'AutoZLog timestamp not available. Please process AutoZLog.txt first.'
-        })
-    
-    print(f"Processing ALL.txt: {file_path}")
-    
-    result = process_all_txt_worker(file_path, autoz_log_timestamp)
-    
-    if result['success']:
-        analysis_file_data = result['result']
-        print("ALL.txt processed successfully")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Analysis completed successfully',
-            'redirect_url': '/result'
-        })
-    else:
-        print(f"Error processing ALL.txt: {result['error']}")
-        return jsonify({
-            'success': False,
-            'error': result['error']
-        })
+
+@app.route('/api/shutdown', methods=['POST'])
+def shutdown():
+    """立即關閉伺服器（當瀏覽器關閉時調用）"""
+    print("Browser closed, shutting down immediately...")
+
+    def delayed_shutdown():
+        time.sleep(0.5)
+        os._exit(0)
+
+    threading.Thread(target=delayed_shutdown, daemon=True).start()
+    return jsonify({'success': True})
 
 @app.route('/api/regenerate_chart', methods=['POST'])
 def regenerate_chart():
     """重新生成圖表 API (用於 X/Y/Z 軸切換)"""
-    update_activity()
-    
-    global analysis_file_data
-    
-    if analysis_file_data is None:
-        return jsonify({
-            'success': False,
-            'error': 'No analysis data available'
-        })
-    
-    data = request.get_json()
-    axis_type = data.get('axis_type', 'z').lower()
-    
-    if axis_type not in ['x', 'y', 'z']:
-        return jsonify({
-            'success': False,
-            'error': 'Invalid axis type'
-        })
-    
     try:
+        update_activity()
+
+        global analysis_file_data
+
+        if analysis_file_data is None:
+            return jsonify({
+                'success': False,
+                'error': 'No analysis data available'
+            })
+
+        data = request.get_json()
+        axis_type = data.get('axis_type', 'z').lower()
+
+        if axis_type not in ['x', 'y', 'z']:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid axis type'
+            })
         wafer_data = analysis_file_data['wafer_data']
         x_standard = analysis_file_data['x_standard']
         y_standard = analysis_file_data['y_standard']
@@ -1054,12 +1133,14 @@ def regenerate_chart():
             'stats': stats,
             'anomaly_stats': anomaly_stats
         })
-        
+
     except Exception as e:
-        print(f"Error regenerating chart: {str(e)}")
+        print(f"Error in regenerate_chart: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Failed to regenerate chart: {str(e)}'
         })
 
 def generate_index_html():
@@ -1072,8 +1153,8 @@ def generate_index_html():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>AutoZ Wafer4P Aligner V12.0</title>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="/assets/Google_Fonts/css/noto-sans-tc.css">
+        <link rel="stylesheet" href="/assets/Font_Awesome/css/all.min.css">
         <style>
             * {
                 margin: 0;
@@ -1445,7 +1526,137 @@ def generate_index_html():
                 transform: translateY(-2px);
                 box-shadow: 0 6px 16px rgba(44, 44, 44, 0.25);
             }
-            
+
+            .modal-buttons {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+            }
+
+            .modal-btn-secondary {
+                background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+                color: white;
+            }
+
+            .modal-btn-secondary:hover {
+                background: linear-gradient(135deg, #5a6268 0%, #545b62 100%);
+            }
+
+            /* Toast notification */
+            .toast-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                pointer-events: none;
+            }
+
+            .toast {
+                min-width: 300px;
+                max-width: 400px;
+                padding: 16px 20px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                opacity: 0;
+                transform: translateX(400px);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                pointer-events: auto;
+                border-left: 4px solid #4A4A4A;
+            }
+
+            .toast.show {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            .toast.hide {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+
+            .toast-icon {
+                font-size: 24px;
+                flex-shrink: 0;
+            }
+
+            .toast-content {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .toast-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: #2C2C2C;
+                margin-bottom: 4px;
+            }
+
+            .toast-message {
+                font-size: 13px;
+                color: #666666;
+                line-height: 1.4;
+                word-wrap: break-word;
+            }
+
+            .toast-close {
+                font-size: 20px;
+                color: #999999;
+                cursor: pointer;
+                flex-shrink: 0;
+                transition: color 0.2s;
+                background: none;
+                border: none;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .toast-close:hover {
+                color: #666666;
+            }
+
+            .toast.success {
+                border-left-color: #27AE60;
+            }
+
+            .toast.success .toast-icon {
+                color: #27AE60;
+            }
+
+            .toast.error {
+                border-left-color: #E74C3C;
+            }
+
+            .toast.error .toast-icon {
+                color: #E74C3C;
+            }
+
+            .toast.warning {
+                border-left-color: #F39C12;
+            }
+
+            .toast.warning .toast-icon {
+                color: #F39C12;
+            }
+
+            .toast.info {
+                border-left-color: #3498DB;
+            }
+
+            .toast.info .toast-icon {
+                color: #3498DB;
+            }
+
             /* Step indicator */
             .step-indicator {
                 display: flex;
@@ -1705,10 +1916,107 @@ def generate_index_html():
                 <button class="modal-btn" onclick="closeModal('successModal')">OK</button>
             </div>
         </div>
-        
+
+        <!-- Message modal -->
+        <div class="modal" id="messageModal">
+            <div class="modal-content">
+                <div class="modal-icon" id="messageIcon">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+                <div class="modal-title" id="messageTitle">Message</div>
+                <div class="modal-message" id="messageText">Message content</div>
+                <div class="modal-buttons">
+                    <button class="modal-btn" id="messageOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm modal -->
+        <div class="modal" id="confirmModal">
+            <div class="modal-content">
+                <div class="modal-icon">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="modal-title">Confirm</div>
+                <div class="modal-message" id="confirmMessage">確認訊息</div>
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-secondary" id="confirmCancelBtn">Cancel</button>
+                    <button class="modal-btn" id="confirmOkBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast container -->
+        <div class="toast-container" id="toastContainer"></div>
+
         <script>
+            // ========== Browser close detection mechanism ==========
+
+            let isNormalNavigation = false;
+
+            window.addEventListener('beforeunload', () => {
+                if (!isNormalNavigation) {
+                    fetch('/api/shutdown', {
+                        method: 'POST',
+                        keepalive: true
+                    });
+                }
+            });
+
+            // ========== Promise-based dialog functions ==========
+
+            async function showConfirm(message, isAlert = false) {
+                return new Promise((resolve) => {
+                    const confirmModal = document.getElementById('confirmModal');
+                    const confirmMessage = document.getElementById('confirmMessage');
+                    const confirmOkBtn = document.getElementById('confirmOkBtn');
+                    const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+
+                    confirmMessage.textContent = message;
+
+                    if (isAlert) {
+                        confirmCancelBtn.style.display = 'none';
+                        confirmOkBtn.textContent = 'OK';
+                    } else {
+                        confirmCancelBtn.style.display = 'block';
+                        confirmOkBtn.textContent = 'Confirm';
+                    }
+
+                    confirmModal.classList.add('show');
+
+                    confirmOkBtn.onclick = () => {
+                        confirmModal.classList.remove('show');
+                        resolve(true);
+                    };
+
+                    confirmCancelBtn.onclick = () => {
+                        confirmModal.classList.remove('show');
+                        resolve(false);
+                    };
+                });
+            }
+
+            function showMessage(title, message, iconClass = 'fa-circle-info', iconColor = '#4A4A4A') {
+                const messageModal = document.getElementById('messageModal');
+                const messageIcon = document.getElementById('messageIcon');
+                const messageTitle = document.getElementById('messageTitle');
+                const messageText = document.getElementById('messageText');
+                const messageOkBtn = document.getElementById('messageOkBtn');
+
+                messageIcon.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+                messageIcon.style.color = iconColor;
+                messageTitle.textContent = title;
+                messageText.textContent = message;
+
+                messageModal.classList.add('show');
+
+                messageOkBtn.onclick = () => {
+                    messageModal.classList.remove('show');
+                };
+            }
+
             // ========== Version check mechanism ==========
-            
+
             async function checkVersionOnStartup() {
                 try {
                     const response = await fetch('/api/check_version');
@@ -1833,8 +2141,8 @@ def generate_index_html():
                         document.getElementById('step3').classList.add('active');
                         document.getElementById('stepIndicator').classList.remove('progress-33');
                         document.getElementById('stepIndicator').classList.add('progress-66');
-                        
-                        showSuccess('AutoZLog.txt processed successfully');
+
+                        showToast('AutoZLog.txt processed successfully', 'success', 3000);
                     } else {
                         this.disabled = false;
                         showError(processResult.error);
@@ -1887,7 +2195,8 @@ def generate_index_html():
                         document.getElementById('step3').classList.add('completed');
                         document.getElementById('stepIndicator').classList.remove('progress-66');
                         document.getElementById('stepIndicator').classList.add('progress-100');
-                        
+
+                        isNormalNavigation = true;  // 標記為正常跳轉
                         window.location.href = processResult.redirect_url;
                     } else {
                         this.disabled = false;
@@ -1957,7 +2266,78 @@ def generate_index_html():
             function closeModal(modalId) {
                 document.getElementById(modalId).classList.remove('show');
             }
-            
+
+            // Toast notification function
+            function showToast(message, type = 'success', duration = 3000) {
+                const container = document.getElementById('toastContainer');
+
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+
+                // Icon mapping
+                const icons = {
+                    success: 'fa-circle-check',
+                    error: 'fa-circle-xmark',
+                    warning: 'fa-triangle-exclamation',
+                    info: 'fa-circle-info'
+                };
+
+                const titles = {
+                    success: 'Success',
+                    error: 'Error',
+                    warning: 'Warning',
+                    info: 'Info'
+                };
+
+                toast.innerHTML = `
+                    <div class="toast-icon">
+                        <i class="fa-solid ${icons[type] || icons.info}"></i>
+                    </div>
+                    <div class="toast-content">
+                        <div class="toast-title">${titles[type] || titles.info}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                    <button class="toast-close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+
+                // Add to container
+                container.appendChild(toast);
+
+                // Close button handler
+                const closeBtn = toast.querySelector('.toast-close');
+                closeBtn.addEventListener('click', () => {
+                    removeToast(toast);
+                });
+
+                // Show toast with animation
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+
+                // Auto remove
+                if (duration > 0) {
+                    setTimeout(() => {
+                        removeToast(toast);
+                    }, duration);
+                }
+
+                return toast;
+            }
+
+            function removeToast(toast) {
+                toast.classList.add('hide');
+                toast.classList.remove('show');
+
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.parentElement.removeChild(toast);
+                    }
+                }, 300);
+            }
+
             // Click modal background to close
             window.addEventListener('click', (e) => {
                 if (e.target.id === 'errorModal') {
@@ -1965,6 +2345,12 @@ def generate_index_html():
                 }
                 if (e.target.id === 'successModal') {
                     document.getElementById('successModal').classList.remove('show');
+                }
+                if (e.target.id === 'messageModal') {
+                    document.getElementById('messageModal').classList.remove('show');
+                }
+                if (e.target.id === 'confirmModal') {
+                    document.getElementById('confirmModal').classList.remove('show');
                 }
             });
             
@@ -2007,6 +2393,9 @@ def generate_result_html(data):
     # 生成新的圖表(包含 AutoZ complete 點位)
     z_anomaly_fig, z_anomaly_stats = create_anomaly_chart(wafer_data, 'z', z_standard, standard_point_data)
     wafer_status_html = create_wafer_status_dashboard(wafer_data, z_standard)
+
+    # 生成 Plotly.js 內嵌程式碼（離線可用）
+    plotly_js_code = plotly.offline.get_plotlyjs()
 
     # 轉換為 HTML
     x_html = x_fig.to_html(include_plotlyjs=False, full_html=False, config={"responsive": True})
@@ -2064,8 +2453,13 @@ def generate_result_html(data):
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>AutoZ Wafer4P Aligner - {selected_machine_type}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link rel="stylesheet" href="/assets/Google_Fonts/css/noto-sans-tc.css">
+        <link rel="stylesheet" href="/assets/Font_Awesome/css/all.min.css">
+
+        <script type="text/javascript">
+            {plotly_js_code}
+        </script>
+
         <style>
 
             body {{
@@ -2527,6 +2921,19 @@ def generate_result_html(data):
         </div>
 
         <script>
+            // ========== Browser close detection mechanism ==========
+
+            let isNormalNavigation = false;
+
+            window.addEventListener('beforeunload', () => {{
+                if (!isNormalNavigation) {{
+                    fetch('/api/shutdown', {{
+                        method: 'POST',
+                        keepalive: true
+                    }});
+                }}
+            }});
+
             // Tab switching function
             function showTab(tabName) {{
                 // Hide all tab contents
