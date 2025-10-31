@@ -218,14 +218,22 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
     wafer_boundaries = []
     wafer_labels = []
     point_labels = []
-    
+
     value_key = f"{axis_type}_values"
-    
+
     # 按開始時間排序晶圓
     sorted_wafers = sorted(wafer_data.items(), key=lambda x: x[1]['start_time'])
-    
+
     current_index = 0
-    
+
+    # 首先插入 AutoZ complete 點作為第一個點（如果有提供）
+    if standard_point_data and axis_type in standard_point_data:
+        autoz_value = standard_point_data[axis_type]
+        continuous_x.append(0)
+        continuous_y.append(autoz_value)
+        point_labels.append("AutoZ Complete")
+        current_index = 1  # 後續的 Wafer 資料從 index 1 開始
+
     # 處理每個晶圓
     for wafer_id, data in sorted_wafers:
         if value_key in data and data[value_key]:
@@ -251,22 +259,22 @@ def create_line_chart(wafer_data, axis_type, standard_value=None, standard_point
     if continuous_x and continuous_y:
         colors = []
         sizes = []
-        
-        # 檢查第一個點是否為 Auto Z complete 點
-        is_first_point_autoz = False
-        if standard_point_data and axis_type in standard_point_data:
-            autoz_value = standard_point_data[axis_type]
-            if len(continuous_y) > 0 and abs(continuous_y[0] - autoz_value) < 0.001:
-                is_first_point_autoz = True
-                max_y_value = max(max_y_value, autoz_value)
-                min_y_value = min(min_y_value, autoz_value)
-        
+
+        # 檢查是否有 AutoZ complete 點
+        has_autoz_point = (standard_point_data and axis_type in standard_point_data)
+
+        # 更新最大/最小值（包含 AutoZ complete 點）
+        if has_autoz_point and continuous_y:
+            max_y_value = max(max_y_value, continuous_y[0])
+            min_y_value = min(min_y_value, continuous_y[0])
+
         for i in range(len(continuous_x)):
-            if i == 0 and is_first_point_autoz:
+            if i == 0 and has_autoz_point:
+                # 第一個點是 AutoZ Complete（紅色大點）
                 colors.append('#e5857b')
                 sizes.append(20)
-                point_labels[0] = "AutoZ Complete"
             else:
+                # 其他點是 Wafer 資料（藍色小點）
                 colors.append('#93A1C1')
                 sizes.append(8)
         
@@ -540,17 +548,29 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
         tuple: (fig, stats) Plotly 圖表物件和統計資料
     """
     fig = go.Figure()
-    
+
     continuous_x = []
     normal_y = []
     anomaly_y = []
     normal_indices = []
     anomaly_indices = []
     wafer_ids = []
-    
+
     sorted_wafers = sorted(wafer_data.items(), key=lambda x: x[1]['start_time'])
     current_index = 0
-    
+
+    # 首先插入 AutoZ complete 點作為第一個點（如果有提供）
+    if standard_point_data and axis_type in standard_point_data:
+        autoz_value = standard_point_data[axis_type]
+        wafer_ids.append("AutoZ Complete")
+        if autoz_value < standard_value:
+            anomaly_indices.append(0)
+            anomaly_y.append(autoz_value)
+        else:
+            normal_indices.append(0)
+            normal_y.append(autoz_value)
+        current_index = 1  # 後續的 Wafer 資料從 index 1 開始
+
     for wafer_id, data in sorted_wafers:
         values_key = f'{axis_type}_values'
         if values_key in data and data[values_key]:
@@ -567,22 +587,10 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
                     normal_y.append(val)
 
             current_index += len(values)
-    
-    # 檢查第一個點是否為 AutoZ complete 點
-    is_first_point_autoz = False
-    if standard_point_data and axis_type in standard_point_data:
-        autoz_value = standard_point_data[axis_type]
-        if len(wafer_ids) > 0:
-            if normal_indices and normal_indices[0] == 0:
-                first_value = normal_y[0]
-            elif anomaly_indices and anomaly_indices[0] == 0:
-                first_value = anomaly_y[0]
-            else:
-                first_value = None
 
-            if first_value is not None and abs(first_value - autoz_value) < 0.001:
-                is_first_point_autoz = True
-    
+    # 檢查是否有 AutoZ complete 點
+    has_autoz_point = (standard_point_data and axis_type in standard_point_data)
+
     # 添加正常點
     if normal_indices:
         normal_wafer_ids_list = []
@@ -593,13 +601,15 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
         normal_colors = []
         normal_sizes = []
         normal_symbols = []
-        
+
         for i, idx in enumerate(normal_indices):
-            if idx == 0 and is_first_point_autoz:
+            if idx == 0 and has_autoz_point:
+                # AutoZ Complete 點（橘色菱形）
                 normal_colors.append('#FF6600')
                 normal_sizes.append(14)
                 normal_symbols.append('diamond')
             else:
+                # 正常點（綠色圓形）
                 normal_colors.append('#4CAF50')
                 normal_sizes.append(8)
                 normal_symbols.append('circle')
@@ -616,7 +626,7 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
                     symbol=normal_symbols,
                     line=dict(width=1, color='white')
                 ),
-                text=[f"{'AutoZ Complete' if (idx == 0 and is_first_point_autoz) else f'Wafer ID: {wid}'}<br>{axis_type.upper()} Value: {val:.2f} µm"
+                text=[f"{'AutoZ Complete' if (idx == 0 and has_autoz_point) else f'Wafer ID: {wid}'}<br>{axis_type.upper()} Value: {val:.2f} µm"
                       for idx, wid, val in zip(normal_indices, normal_wafer_ids_list, normal_y)],
                 hoverinfo='text'
             )
@@ -632,13 +642,15 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
         anomaly_colors = []
         anomaly_sizes = []
         anomaly_symbols = []
-        
+
         for i, idx in enumerate(anomaly_indices):
-            if idx == 0 and is_first_point_autoz:
+            if idx == 0 and has_autoz_point:
+                # AutoZ Complete 點（橘色菱形）
                 anomaly_colors.append('#FF6600')
                 anomaly_sizes.append(14)
                 anomaly_symbols.append('diamond')
             else:
+                # 異常點（紅色圓形）
                 anomaly_colors.append('#F44336')
                 anomaly_sizes.append(10)
                 anomaly_symbols.append('circle')
@@ -655,7 +667,7 @@ def create_anomaly_chart(wafer_data, axis_type, standard_value, standard_point_d
                     symbol=anomaly_symbols,
                     line=dict(width=1, color='white')
                 ),
-                text=[f"{'AutoZ Complete' if (idx == 0 and is_first_point_autoz) else f'Wafer ID: {wid}'}<br>{axis_type.upper()} Value: {val:.2f} µm"
+                text=[f"{'AutoZ Complete' if (idx == 0 and has_autoz_point) else f'Wafer ID: {wid}'}<br>{axis_type.upper()} Value: {val:.2f} µm"
                       for idx, wid, val in zip(anomaly_indices, anomaly_wafer_ids_list, anomaly_y)],
                 hoverinfo='text'
             )
